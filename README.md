@@ -1,98 +1,333 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 🏪 Store Backend - Tienda Retail v2.1
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Backend para tienda retail de productos de vestir con operaciones físicas y digitales.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+**Arquitectura**: Domain-Driven Design (DDD) + Hexagonal Architecture (Ports & Adapters)  
+**Stack**: NestJS, TypeScript, Prisma, PostgreSQL, Redis  
+**Versión del Dominio**: 2.1
 
-## Description
+---
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 📚 Documentación Principal
 
-## Project setup
+**IMPORTANTE:** Lee estos documentos en orden antes de empezar:
 
-```bash
-$ npm install
+| Documento                                                    | Descripción                      | Tiempo |
+| ------------------------------------------------------------ | -------------------------------- | ------ |
+| **[QUICKSTART.md](./QUICKSTART.md)**                         | ⚡ Guía rápida de inicio         | 5 min  |
+| **[CLAUDE.md](./CLAUDE.md)**                                 | 📖 Visión general del sistema    | 10 min |
+| **[ARQUITECTURA_HEXAGONAL.md](./ARQUITECTURA_HEXAGONAL.md)** | 🏗️ Guía completa de arquitectura | 20 min |
+| **[ARQUITECTURA_DIAGRAMA.md](./ARQUITECTURA_DIAGRAMA.md)**   | 🎨 Diagramas visuales            | 10 min |
+
+---
+
+## 🎯 Características del Sistema
+
+### Core v1.0
+
+- ✅ Ventas multicanal (física y digital)
+- ✅ Gestión de inventario con reservas temporales
+- ✅ Sistema de cambios controlados con diferencia de precio
+- ✅ Envíos externos con tracking
+- ✅ Documentación fiscal (facturas, notas de crédito/débito)
+- ✅ Gestión de terceros con roles múltiples
+
+### Nuevas Funcionalidades v2.1
+
+- 🆕 **Carrito**: Estado pre-transaccional sin reserva de inventario
+- 🆕 **Lista de Deseos**: Múltiples listas personalizadas por cliente
+- 🆕 **Notificaciones**: Sistema transversal in-app con preferencias configurables
+- 🆕 **Cliente con Cuenta**: Diferenciación entre clientes CON_CUENTA y SIN_CUENTA
+
+---
+
+## 🏗️ Arquitectura
+
+Este proyecto implementa **Arquitectura Hexagonal** combinada con **DDD**.
+
+### Estructura de un Módulo
+
+```
+{modulo}/
+├── domain/                     ← Núcleo (sin dependencias)
+│   ├── aggregates/            ← Entidades raíz + lógica de negocio
+│   ├── value-objects/         ← Objetos de valor inmutables
+│   ├── ports/
+│   │   ├── inbound/          ← Casos de uso (expuestos)
+│   │   └── outbound/         ← Dependencias externas (necesitadas)
+│   └── events/               ← Eventos de dominio
+├── application/               ← Orquestación
+│   ├── services/             ← Implementación de casos de uso
+│   ├── dto/                  ← Data Transfer Objects
+│   └── mappers/              ← Transformaciones
+└── infrastructure/            ← Adaptadores
+    ├── persistence/          ← Repositorios (Prisma)
+    ├── adapters/             ← Adaptadores a otros módulos
+    └── controllers/          ← Endpoints HTTP (NestJS)
 ```
 
-## Compile and run the project
+### Módulos del Sistema (11 Bounded Contexts)
+
+| Módulo            | Estado             | Descripción                             |
+| ----------------- | ------------------ | --------------------------------------- |
+| **COMERCIAL**     | ✅ Implementado    | Ventas y cambios (módulo de referencia) |
+| **IDENTIDAD**     | 📋 Por implementar | Terceros (personas/empresas)            |
+| **CATALOGO**      | 📋 Por implementar | Productos y paquetes                    |
+| **INVENTARIO**    | 📋 Por implementar | Stock, reservas, movimientos            |
+| **PRE_VENTA**     | 📋 Por implementar | Carrito y listas de deseos              |
+| **LOGISTICA**     | 📋 Por implementar | Envíos y entregas                       |
+| **FISCAL**        | 📋 Por implementar | Documentación tributaria                |
+| **COMUNICACION**  | 📋 Por implementar | Notificaciones                          |
+| **CONFIGURACION** | 📋 Por implementar | Parámetros del sistema                  |
+| **SEGURIDAD**     | 📋 Por implementar | Perfiles y permisos                     |
+| **AUDITORIA**     | 📋 Por implementar | Eventos de dominio                      |
+
+---
+
+## 🚀 Inicio Rápido
+
+### Prerrequisitos
+
+- Node.js 18+
+- PostgreSQL 16+
+- Redis 7+
+- npm o yarn
+
+### Instalación
 
 ```bash
-# development
-$ npm run start
+# 1. Clonar repositorio
+git clone <repo-url>
+cd store-backend
 
-# watch mode
-$ npm run start:dev
+# 2. Instalar dependencias
+npm install
 
-# production mode
-$ npm run start:prod
+# 3. Configurar variables de entorno
+cp .env.example .env
+# Editar .env con tus credenciales
+
+# 4. Configurar Prisma (cuando esté listo)
+npx prisma migrate dev
+npx prisma generate
+
+# 5. Ejecutar en desarrollo
+npm run start:dev
 ```
 
-## Run tests
+### Explorar el Código
 
 ```bash
-# unit tests
-$ npm run test
+# Ver módulo de ejemplo (COMERCIAL)
+ls src/modules/comercial/
 
-# e2e tests
-$ npm run test:e2e
+# Ver documentación de un módulo
+cat src/modules/comercial/COMERCIAL_CLAUDE.md
+cat src/modules/comercial/COMERCIAL_ENTITIES_CLAUDE.md
 
-# test coverage
-$ npm run test:cov
+# Ver estructura de todos los módulos
+tree src/modules/ -L 2
 ```
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## 📋 Scripts Disponibles
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# Desarrollo
+npm run start:dev          # Modo watch
+npm run start:debug        # Con debugger
+
+# Producción
+npm run build              # Compilar
+npm run start:prod         # Ejecutar compilado
+
+# Testing
+npm run test               # Unit tests
+npm run test:watch         # Unit tests en watch
+npm run test:cov           # Con coverage
+npm run test:e2e           # E2E tests
+
+# Linting
+npm run lint               # ESLint
+npm run format             # Prettier
+
+# Prisma
+npx prisma migrate dev     # Crear migración
+npx prisma generate        # Generar cliente
+npx prisma studio          # UI para explorar BD
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+---
 
-## Resources
+## 🧪 Testing
 
-Check out a few resources that may come in handy when working with NestJS:
+El proyecto sigue la pirámide de testing hexagonal:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### Unit Tests (Dominio)
 
-## Support
+```typescript
+// SIN mocks - Lógica pura
+describe('Venta Aggregate', () => {
+  it('debe confirmar venta en borrador', () => {
+    const venta = Venta.crear({ ... });
+    venta.confirmar();
+    expect(venta.getEstado()).toBe(EstadoVenta.CONFIRMADA);
+  });
+});
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### Integration Tests (Application)
 
-## Stay in touch
+```typescript
+// CON mocks de puertos (interfaces)
+describe('VentaService', () => {
+  it('debe crear venta', async () => {
+    const mockRepo = { save: jest.fn() };
+    const service = new VentaService(mockRepo, ...);
+    await service.crearDesdeCarrito(...);
+    expect(mockRepo.save).toHaveBeenCalled();
+  });
+});
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+### E2E Tests
 
-## License
+```typescript
+// Infraestructura real
+it('POST /ventas debe crear venta', async () => {
+  const response = await request(app)
+    .post('/ventas')
+    .send({ ... });
+  expect(response.status).toBe(201);
+});
+```
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+---
+
+## 📖 Guías y Convenciones
+
+### Para Desarrolladores Nuevos
+
+1. Lee **[QUICKSTART.md](./QUICKSTART.md)** (5 min)
+2. Lee **[ARQUITECTURA_HEXAGONAL.md](./ARQUITECTURA_HEXAGONAL.md)** (20 min)
+3. Explora `src/modules/comercial/` como ejemplo
+4. Consulta **[ARQUITECTURA_DIAGRAMA.md](./ARQUITECTURA_DIAGRAMA.md)** para visualizaciones
+
+### Para Implementar un Módulo Nuevo
+
+1. Lee `{MODULO}_CLAUDE.md` (lógica de negocio)
+2. Lee `{MODULO}_ENTITIES_CLAUDE.md` (entidades)
+3. La estructura ya está creada (domain, application, infrastructure)
+4. Sigue el orden: agregados → puertos → servicios → adaptadores
+
+### Reglas de Dependencia
+
+```
+✅ PERMITIDO:
+  domain/        → NADA
+  application/   → domain/
+  infrastructure → domain/ + application/
+
+❌ PROHIBIDO:
+  domain/        → application/  ❌
+  domain/        → infrastructure/ ❌
+  application/   → infrastructure/ ❌
+```
+
+---
+
+## 🛠️ Stack Tecnológico
+
+| Categoría         | Tecnología      | Versión |
+| ----------------- | --------------- | ------- |
+| **Framework**     | NestJS          | 11.x    |
+| **Lenguaje**      | TypeScript      | 5.x     |
+| **Base de Datos** | PostgreSQL      | 16+     |
+| **ORM**           | Prisma          | 5+      |
+| **Cache**         | Redis           | 7+      |
+| **Autenticación** | JWT             | -       |
+| **Testing**       | Jest            | 30.x    |
+| **Validación**    | class-validator | -       |
+
+---
+
+## 📁 Estructura del Proyecto
+
+```
+store-backend/
+├── src/
+│   ├── shared/                  # Código compartido
+│   │   ├── domain/
+│   │   └── infrastructure/
+│   └── modules/                 # 11 bounded contexts
+│       ├── comercial/           # ✅ Ejemplo completo
+│       ├── identidad/
+│       ├── catalogo/
+│       ├── inventario/
+│       ├── pre-venta/
+│       ├── logistica/
+│       ├── fiscal/
+│       ├── comunicacion/
+│       ├── configuracion/
+│       ├── seguridad/
+│       └── auditoria/
+│
+├── prisma/                      # Esquemas de BD
+├── test/                        # E2E tests
+├── scripts/                     # Scripts utilitarios
+│
+├── QUICKSTART.md                # ⚡ Inicio rápido
+├── CLAUDE.md                    # 📖 Visión general
+├── ARQUITECTURA_HEXAGONAL.md    # 🏗️ Guía arquitectura
+├── ARQUITECTURA_DIAGRAMA.md     # 🎨 Diagramas
+└── README.md                    # Este archivo
+```
+
+---
+
+## 🤝 Contribuir
+
+### Workflow
+
+1. Crear branch: `git checkout -b feature/nombre-feature`
+2. Implementar siguiendo arquitectura hexagonal
+3. Escribir tests (unitarios + integración + e2e)
+4. Commit: `git commit -m "feat: descripción"`
+5. Push: `git push origin feature/nombre-feature`
+6. Crear Pull Request
+
+### Convenciones de Código
+
+- **Nomenclatura BD**: snake_case (tablas, columnas)
+- **Nomenclatura TypeScript**: camelCase (variables), PascalCase (clases)
+- **Enums**: UPPER_SNAKE_CASE
+- **IDs**: UUID v4
+
+---
+
+## 📞 Contacto y Soporte
+
+- **Documentación**: Ver archivos `.md` en raíz del proyecto
+- **Issues**: Usar GitHub Issues
+- **Preguntas**: Consultar `ARQUITECTURA_HEXAGONAL.md` primero
+
+---
+
+## 📄 Licencia
+
+[Especificar licencia]
+
+---
+
+## 🎓 Recursos Adicionales
+
+- [NestJS Documentation](https://docs.nestjs.com)
+- [Hexagonal Architecture - Alistair Cockburn](https://alistair.cockburn.us/hexagonal-architecture/)
+- [Domain-Driven Design - Eric Evans](https://www.domainlanguage.com/ddd/)
+- [Prisma Documentation](https://www.prisma.io/docs)
+
+---
+
+**Versión del Dominio**: 2.1  
+**Última Actualización**: Enero 2026

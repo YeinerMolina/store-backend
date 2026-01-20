@@ -1,18 +1,25 @@
 import { Module } from '@nestjs/common';
 
 // Application Layer
-import { VentaService } from './application/services/venta.service';
+import { VentaApplicationService } from './application/services/venta-application.service';
 
 // Infrastructure Layer - Persistence
-import { PrismaVentaRepository } from './infrastructure/persistence/prisma-venta.repository';
+import { VentaRepositoryPostgres } from './infrastructure/persistence/venta-repository-postgres';
 
 // Infrastructure Layer - Adapters
-import { InventarioAdapter } from './infrastructure/adapters/inventario.adapter';
-import { CatalogoAdapter } from './infrastructure/adapters/catalogo.adapter';
-import { EventBusAdapter } from './infrastructure/adapters/event-bus.adapter';
+import { InventarioHttpAdapter } from './infrastructure/adapters/inventario-http.adapter';
+import { CatalogoHttpAdapter } from './infrastructure/adapters/catalogo-http.adapter';
+import { EventBusRedisAdapter } from './infrastructure/adapters/event-bus-redis.adapter';
 
 // Infrastructure Layer - Controllers
 import { VentaController } from './infrastructure/controllers/venta.controller';
+
+// Tokens para inyección de dependencias
+export const VENTA_SERVICE = 'VentaService';
+export const VENTA_REPOSITORY = 'VentaRepository';
+export const INVENTARIO_PORT = 'InventarioPort';
+export const CATALOGO_PORT = 'CatalogoPort';
+export const EVENT_BUS_PORT = 'EventBusPort';
 
 /**
  * MÓDULO COMERCIAL
@@ -22,36 +29,70 @@ import { VentaController } from './infrastructure/controllers/venta.controller';
  * 1. Los servicios de aplicación dependen de INTERFACES (puertos)
  * 2. En runtime, NestJS inyecta las IMPLEMENTACIONES (adaptadores)
  * 3. Esto permite cambiar implementaciones sin tocar el dominio
+ *
+ * CONVENCIÓN DE NOMBRES:
+ * - Puerto (interface): VentaRepository, InventarioPort
+ * - Implementación: VentaRepositoryPostgres, InventarioHttpAdapter
+ * - Token DI: String descriptivo ('VentaRepository', 'InventarioPort')
  */
 @Module({
   controllers: [VentaController],
   providers: [
-    // Application Services (implementan puertos inbound)
+    // ========================================
+    // PUERTOS INBOUND → IMPLEMENTACIONES
+    // ========================================
     {
-      provide: 'IVentaService',
-      useClass: VentaService,
+      provide: VENTA_SERVICE,
+      useClass: VentaApplicationService,
     },
 
-    // Outbound Adapters (implementan puertos outbound)
+    // ========================================
+    // PUERTOS OUTBOUND → IMPLEMENTACIONES
+    // ========================================
+
+    // Persistencia
     {
-      provide: 'IVentaRepository',
-      useClass: PrismaVentaRepository,
+      provide: VENTA_REPOSITORY,
+      useClass: VentaRepositoryPostgres,
+      // Cambiar implementación sin tocar dominio:
+      // useClass: VentaRepositoryMongo,
+      // useClass: VentaRepositoryInMemory, // para tests
+    },
+
+    // Comunicación con otros módulos
+    {
+      provide: INVENTARIO_PORT,
+      useClass: InventarioHttpAdapter,
+      // Cambiar implementación:
+      // useClass: InventarioEventAdapter,
+      // useClass: InventarioInProcessAdapter,
     },
     {
-      provide: 'IInventarioPort',
-      useClass: InventarioAdapter,
+      provide: CATALOGO_PORT,
+      useClass: CatalogoHttpAdapter,
+      // Cambiar implementación:
+      // useClass: CatalogoEventAdapter,
+      // useClass: CatalogoInProcessAdapter,
     },
+
+    // Event Bus
     {
-      provide: 'ICatalogoPort',
-      useClass: CatalogoAdapter,
-    },
-    {
-      provide: 'IEventBusPort',
-      useClass: EventBusAdapter,
+      provide: EVENT_BUS_PORT,
+      useClass: EventBusRedisAdapter,
+      // Cambiar implementación:
+      // useClass: EventBusRabbitMQAdapter,
+      // useClass: EventBusKafkaAdapter,
+      // useClass: EventBusInMemoryAdapter, // para tests
     },
 
     // TODO: Agregar PrismaClient cuando se configure Prisma
+    // {
+    //   provide: PrismaClient,
+    //   useValue: new PrismaClient(),
+    // },
   ],
-  exports: ['IVentaService'], // Exportar para otros módulos
+  exports: [
+    VENTA_SERVICE, // Exportar para que otros módulos lo usen
+  ],
 })
 export class ComercialModule {}

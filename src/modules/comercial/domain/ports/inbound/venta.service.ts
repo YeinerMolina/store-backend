@@ -5,8 +5,11 @@ import { Venta } from '../../aggregates/venta.aggregate';
  * PUERTO INBOUND (Driving Port)
  * Define el contrato de los casos de uso del módulo COMERCIAL
  * Los adaptadores primarios (controllers) dependen de esta interfaz
+ *
+ * Implementación:
+ * - VentaApplicationService (en application/services/)
  */
-export interface IVentaService {
+export interface VentaService {
   /**
    * CU-COM-01: Crear Venta desde Carrito
    */

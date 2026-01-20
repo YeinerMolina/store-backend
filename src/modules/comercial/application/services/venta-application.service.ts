@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { UUID } from '../../../../shared/domain/value-objects/uuid.vo';
 import {
   Venta,
@@ -9,15 +9,15 @@ import {
   LineaVenta,
   TipoItem,
 } from '../../domain/aggregates/linea-venta.entity';
-import type { IVentaService } from '../../domain/ports/inbound/i-venta.service';
-import type { IVentaRepository } from '../../domain/ports/outbound/i-venta-repository.port';
-import type { IInventarioPort } from '../../domain/ports/outbound/i-inventario.port';
-import type { ICatalogoPort } from '../../domain/ports/outbound/i-catalogo.port';
-import type { IEventBusPort } from '../../domain/ports/outbound/i-event-bus.port';
+import type { VentaService } from '../../domain/ports/inbound/venta.service';
+import type { VentaRepository } from '../../domain/ports/outbound/venta-repository.port';
+import type { InventarioPort } from '../../domain/ports/outbound/inventario.port';
+import type { CatalogoPort } from '../../domain/ports/outbound/catalogo.port';
+import type { EventBusPort } from '../../domain/ports/outbound/event-bus.port';
 
 /**
- * APPLICATION SERVICE: VentaService
- * Implementa los casos de uso (puerto inbound)
+ * APPLICATION SERVICE: VentaApplicationService
+ * Implementa los casos de uso (puerto inbound VentaService)
  * Orquesta las operaciones entre el dominio y los puertos outbound
  *
  * IMPORTANTE:
@@ -26,12 +26,12 @@ import type { IEventBusPort } from '../../domain/ports/outbound/i-event-bus.port
  * - Maneja transacciones y persistencia
  */
 @Injectable()
-export class VentaService implements IVentaService {
+export class VentaApplicationService implements VentaService {
   constructor(
-    private readonly ventaRepository: IVentaRepository,
-    private readonly inventarioPort: IInventarioPort,
-    private readonly catalogoPort: ICatalogoPort,
-    private readonly eventBus: IEventBusPort,
+    private readonly ventaRepository: VentaRepository,
+    private readonly inventarioPort: InventarioPort,
+    private readonly catalogoPort: CatalogoPort,
+    private readonly eventBus: EventBusPort,
   ) {}
 
   /**

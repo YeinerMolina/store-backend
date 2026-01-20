@@ -3,9 +3,14 @@ import { EventoDominioBase } from '../../../../../shared/domain/events/evento-do
 /**
  * PUERTO OUTBOUND (Driven Port)
  * Define el contrato para publicación de eventos de dominio
- * La infraestructura (Redis, RabbitMQ, etc.) implementa esta interfaz
+ *
+ * Implementaciones:
+ * - EventBusRedis (Redis Pub/Sub)
+ * - EventBusRabbitMQ (RabbitMQ)
+ * - EventBusKafka (Apache Kafka)
+ * - EventBusInMemory (Testing)
  */
-export interface IEventBusPort {
+export interface EventBusPort {
   /**
    * Publicar un evento de dominio
    */

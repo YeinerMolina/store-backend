@@ -1,21 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { UUID } from '../../../../shared/domain/value-objects/uuid.vo';
-import type { IVentaRepository } from '../../domain/ports/outbound/i-venta-repository.port';
+import type { VentaRepository } from '../../domain/ports/outbound/venta-repository.port';
 import type { Venta } from '../../domain/aggregates/venta.aggregate';
 import { VentaPersistenceMapper } from './mappers/venta-persistence.mapper';
 
 /**
- * ADAPTADOR OUTBOUND: PrismaVentaRepository
- * Implementa el puerto IVentaRepository
+ * ADAPTADOR OUTBOUND: VentaRepositoryPostgres
+ * Implementa el puerto VentaRepository usando Prisma + PostgreSQL
  * Mapea entre modelos de dominio y modelos de Prisma
  *
  * IMPORTANTE:
  * - El dominio NUNCA conoce a Prisma
  * - Esta clase traduce entre ambos modelos
+ *
+ * Otras posibles implementaciones:
+ * - VentaRepositoryMongo
+ * - VentaRepositoryInMemory (para tests)
  */
 @Injectable()
-export class PrismaVentaRepository implements IVentaRepository {
+export class VentaRepositoryPostgres implements VentaRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async save(venta: Venta): Promise<void> {

@@ -3,7 +3,11 @@ import { UUID } from '../../../../../shared/domain/value-objects/uuid.vo';
 /**
  * PUERTO OUTBOUND (Driven Port)
  * Define el contrato para comunicación con el módulo INVENTARIO
- * El adaptador de infraestructura implementa esta interfaz
+ *
+ * Implementaciones:
+ * - InventarioHttpAdapter (Comunicación HTTP)
+ * - InventarioEventAdapter (Comunicación por eventos)
+ * - InventarioInProcessAdapter (Llamada directa in-process)
  */
 
 export interface DisponibilidadResult {
@@ -19,7 +23,7 @@ export interface ReservaParams {
   ventaId?: UUID;
 }
 
-export interface IInventarioPort {
+export interface InventarioPort {
   /**
    * Verificar disponibilidad de un ítem
    */

@@ -4,9 +4,14 @@ import { Venta } from '../../aggregates/venta.aggregate';
 /**
  * PUERTO OUTBOUND (Driven Port)
  * Define el contrato para persistencia de Ventas
- * La infraestructura (Prisma) implementa esta interfaz
+ * La infraestructura implementa esta interfaz
+ *
+ * Implementaciones:
+ * - VentaRepositoryPostgres (Prisma + PostgreSQL)
+ * - VentaRepositoryMongo (Mongoose + MongoDB)
+ * - VentaRepositoryInMemory (Testing)
  */
-export interface IVentaRepository {
+export interface VentaRepository {
   save(venta: Venta): Promise<void>;
   findById(id: UUID): Promise<Venta | null>;
   findByClienteId(clienteId: UUID): Promise<Venta[]>;

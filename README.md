@@ -14,7 +14,6 @@ Backend para tienda retail de productos de vestir con operaciones físicas y dig
 
 | Documento                                                    | Descripción                      | Tiempo |
 | ------------------------------------------------------------ | -------------------------------- | ------ |
-| **[QUICKSTART.md](./QUICKSTART.md)**                         | ⚡ Guía rápida de inicio         | 5 min  |
 | **[CLAUDE.md](./CLAUDE.md)**                                 | 📖 Visión general del sistema    | 10 min |
 | **[ARQUITECTURA_HEXAGONAL.md](./ARQUITECTURA_HEXAGONAL.md)** | 🏗️ Guía completa de arquitectura | 20 min |
 | **[ARQUITECTURA_DIAGRAMA.md](./ARQUITECTURA_DIAGRAMA.md)**   | 🎨 Diagramas visuales            | 10 min |

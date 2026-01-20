@@ -171,7 +171,35 @@ PROHIBIDO:
 
 **Inyección de Dependencias**: Las implementaciones concretas (infrastructure) se inyectan en tiempo de ejecución a través de los puertos (domain/ports).
 
-### Nomenclatura de Entidades
+### Convenciones de Nombres (Puertos y Adaptadores)
+
+**Puertos (Interfaces):**
+
+- **NO usar prefijo "I"** (convención C#/Java antigua)
+- Nombres descriptivos del concepto de dominio
+- Ejemplos:
+  - `VentaRepository` (no `IVentaRepository`)
+  - `InventarioPort` (no `IInventarioPort`)
+  - `VentaService` (no `IVentaService`)
+
+**Adaptadores (Implementaciones):**
+
+- Sufijo técnico que indique la tecnología o protocolo
+- Ejemplos:
+  - `VentaRepositoryPostgres` (implementa `VentaRepository`)
+  - `VentaRepositoryMongo` (otra implementación)
+  - `InventarioHttpAdapter` (implementa `InventarioPort` vía HTTP)
+  - `InventarioEventAdapter` (implementa `InventarioPort` vía eventos)
+  - `EventBusRedisAdapter` (implementa `EventBusPort` con Redis)
+
+**Application Services:**
+
+- Sufijo `ApplicationService` para diferenciar de la interfaz
+- Ejemplo: `VentaApplicationService` (implementa `VentaService`)
+
+**Ver**: `CONVENCIONES_NOMBRES.md` para detalles completos.
+
+### Nomenclatura de Entidades de Base de Datos
 
 - **Tablas**: snake_case (ej: `linea_venta`, `movimiento_inventario`)
 - **Campos**: snake_case (ej: `numero_documento`, `fecha_creacion`)
@@ -284,41 +312,41 @@ Ver cada archivo de módulo para detalles completos de invariantes y operaciones
 
 ## Integraciones entre Módulos
 
-### IDENTIDAD provee a:
+### IDENTIDAD provee a
 
 - COMERCIAL: Cliente (aunque Cliente está en COMERCIAL, tercero base está aquí)
 - INVENTARIO: Empleado (para movimientos manuales)
 - FISCAL: Tercero (info fiscal para documentos)
 - SEGURIDAD: Empleado (para autenticación)
 
-### CATALOGO provee a:
+### CATALOGO provee a
 
 - INVENTARIO: Producto/Paquete (para saber qué inventariar)
 - COMERCIAL: Producto/Paquete (para líneas de venta)
 - PRE_VENTA: Producto/Paquete (para carrito y listas)
 
-### INVENTARIO consume de:
+### INVENTARIO consume de
 
 - COMERCIAL: Eventos de Venta y Cambio (para reservar/descontar)
 - CATALOGO: Producto/Paquete (para validar existencia)
 
-### COMERCIAL consume de:
+### COMERCIAL consume de
 
 - CATALOGO: Precios vigentes
 - INVENTARIO: Disponibilidad y reservas
 - PRE_VENTA: Carrito (para conversión)
 
-### FISCAL consume de:
+### FISCAL consume de
 
 - COMERCIAL: Venta, Cambio (para generar documentos)
 - IDENTIDAD: Cliente (info tributaria)
 
-### COMUNICACION consume de:
+### COMUNICACION consume de
 
 - AUDITORIA: EventoDominio (origen de todas las notificaciones)
 - PRE_VENTA: PreferenciaNotificacion (filtrado opcional)
 
-### AUDITORIA es consumida por:
+### AUDITORIA es consumida por
 
 - TODOS los módulos (todos emiten eventos de dominio)
 
@@ -411,6 +439,7 @@ Definidos en `CONFIGURACION`:
 #### JWT y Autenticación
 
 - **Access Token Payload**:
+
   ```typescript
   {
     sub: string;        // empleado_id o cliente_id
@@ -420,6 +449,7 @@ Definidos en `CONFIGURACION`:
     iat: number;
   }
   ```
+
 - **Refresh Token**:
   - Almacenar en Redis con key: `refresh_token:{user_id}:{token_id}`
   - TTL configurable (default: 7 días)
@@ -468,6 +498,12 @@ Este documento explica:
 - Inyección de dependencias con NestJS
 - Testing en hexagonal
 - Ejemplos completos
+
+Convenciones de nombres para puertos y adaptadores:
+
+- Sin prefijo "I" en interfaces
+- Sufijos técnicos en implementaciones
+- Patrones y ejemplos completos
 
 ### 2. **Explorar el Módulo de Ejemplo**
 

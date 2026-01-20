@@ -1,6 +1,6 @@
 import { Controller, Post, Get, Param, Body } from '@nestjs/common';
 import { UUID } from '../../../../shared/domain/value-objects/uuid.vo';
-import type { IVentaService } from '../../domain/ports/inbound/i-venta.service';
+import type { VentaService } from '../../domain/ports/inbound/venta.service';
 import {
   CrearVentaDto,
   CrearVentaResponseDto,
@@ -8,17 +8,17 @@ import {
 
 /**
  * ADAPTADOR PRIMARIO (Driving Adapter): VentaController
- * Expone endpoints HTTP
- * Depende del puerto inbound (IVentaService)
+ * Expone endpoints HTTP usando NestJS
+ * Depende del puerto inbound (VentaService)
  *
  * IMPORTANTE:
- * - No conoce la implementación del servicio
- * - Solo conoce el puerto (interfaz)
+ * - No conoce la implementación del servicio (VentaApplicationService)
+ * - Solo conoce el puerto (interfaz VentaService)
  * - Traduce HTTP → Dominio y Dominio → HTTP
  */
 @Controller('ventas')
 export class VentaController {
-  constructor(private readonly ventaService: IVentaService) {}
+  constructor(private readonly ventaService: VentaService) {}
 
   @Post()
   async crearDesdeCarrito(

@@ -4,6 +4,11 @@ import { Money } from '../../../../../shared/domain/value-objects/money.vo';
 /**
  * PUERTO OUTBOUND (Driven Port)
  * Define el contrato para comunicación con el módulo CATALOGO
+ *
+ * Implementaciones:
+ * - CatalogoHttpAdapter
+ * - CatalogoEventAdapter
+ * - CatalogoInProcessAdapter
  */
 
 export interface ProductoInfo {
@@ -13,7 +18,7 @@ export interface ProductoInfo {
   estaActivo: boolean;
 }
 
-export interface ICatalogoPort {
+export interface CatalogoPort {
   /**
    * Obtener precio vigente de un producto/paquete
    */

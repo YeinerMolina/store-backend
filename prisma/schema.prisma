@@ -11,5 +11,129 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS - INVENTARIO
+// ============================================================================
+
+enum TipoItem {
+  PRODUCTO
+  PAQUETE
+
+  @@map("tipo_item")
+}
+
+enum TipoOperacion {
+  VENTA
+  CAMBIO
+  AJUSTE
+
+  @@map("tipo_operacion")
+}
+
+enum EstadoReserva {
+  ACTIVA
+  CONSOLIDADA
+  LIBERADA
+  EXPIRADA
+
+  @@map("estado_reserva")
+}
+
+enum TipoMovimiento {
+  VENTA_SALIDA
+  CAMBIO_SALIDA
+  CAMBIO_ENTRADA
+  AJUSTE_OPERATIVO
+  AJUSTE_CONTABLE
+  RESERVA
+  LIBERACION
+  ABANDONO_ENTRADA
+  ABANDONO_SALIDA
+
+  @@map("tipo_movimiento")
+}
+
+enum TipoActor {
+  EMPLEADO
+  CLIENTE
+  SISTEMA
+
+  @@map("tipo_actor")
+}
+
+// ============================================================================
+// MODELS - INVENTARIO
+// ============================================================================
+
+model Inventario {
+  id                 String   @id @default(uuid())
+  tipoItem           TipoItem @map("tipo_item")
+  itemId             String   @map("item_id")
+  ubicacion          String?  @map("ubicacion")
+  cantidadDisponible Int      @default(0) @map("cantidad_disponible")
+  cantidadReservada  Int      @default(0) @map("cantidad_reservada")
+  cantidadAbandono   Int      @default(0) @map("cantidad_abandono")
+  version            Int      @default(1) @map("version")
+  fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+
+  // Relaciones
+  reservas    Reserva[]
+  movimientos MovimientoInventario[]
+
+  // Constraints
+  @@unique([tipoItem, itemId], name: "idx_inventario_item")
+  @@index([ubicacion], name: "idx_inventario_ubicacion")
+  @@map("inventario")
+}
+
+model Reserva {
+  id              String        @id @default(uuid())
+  inventarioId    String        @map("inventario_id")
+  tipoOperacion   TipoOperacion @map("tipo_operacion")
+  operacionId     String        @map("operacion_id")
+  cantidad        Int           @map("cantidad")
+  estado          EstadoReserva @default(ACTIVA) @map("estado")
+  fechaCreacion   DateTime      @default(now()) @map("fecha_creacion")
+  fechaExpiracion DateTime      @map("fecha_expiracion")
+  fechaResolucion DateTime?     @map("fecha_resolucion")
+  actorTipo       TipoActor     @map("actor_tipo")
+  actorId         String        @map("actor_id")
+
+  // Relaciones
+  inventario Inventario @relation(fields: [inventarioId], references: [id], onDelete: Cascade)
+
+  // Índices
+  @@index([inventarioId], name: "idx_reserva_inventario")
+  @@index([estado], name: "idx_reserva_estado")
+  @@index([fechaExpiracion, estado], name: "idx_reserva_expiracion")
+  @@index([operacionId], name: "idx_reserva_operacion")
+  @@map("reserva")
+}
+
+model MovimientoInventario {
+  id                  String         @id @default(uuid())
+  inventarioId        String         @map("inventario_id")
+  tipoMovimiento      TipoMovimiento @map("tipo_movimiento")
+  cantidad            Int            @map("cantidad")
+  cantidadAnterior    Int            @map("cantidad_anterior")
+  cantidadPosterior   Int            @map("cantidad_posterior")
+  tipoOperacionOrigen TipoOperacion? @map("tipo_operacion_origen")
+  operacionOrigenId   String?        @map("operacion_origen_id")
+  empleadoId          String?        @map("empleado_id")
+  intencion           String?        @db.VarChar(200)
+  notas               String?        @db.Text
+  fechaMovimiento     DateTime       @default(now()) @map("fecha_movimiento")
+
+  // Relaciones
+  inventario Inventario @relation(fields: [inventarioId], references: [id], onDelete: Cascade)
+  // TODO: Agregar relación a Empleado cuando IDENTIDAD esté disponible
+  // empleado            Empleado?         @relation(fields: [empleadoId], references: [id])
+
+  // Índices
+  @@index([inventarioId], name: "idx_movimiento_inventario")
+  @@index([fechaMovimiento], name: "idx_movimiento_fecha")
+  @@index([tipoMovimiento], name: "idx_movimiento_tipo")
+  @@map("movimiento_inventario")
 }

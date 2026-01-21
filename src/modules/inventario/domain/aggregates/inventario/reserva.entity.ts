@@ -1,5 +1,6 @@
 import { EstadoReservaEnum, TipoActorEnum, TipoOperacionEnum } from './types';
 import { FechaExpiracion } from '../../value-objects/fecha-expiracion';
+import { EstadoInvalidoError } from '../../../../../shared/exceptions/domain.exception';
 
 export class Reserva {
   id: string;
@@ -65,7 +66,7 @@ export class Reserva {
 
   consolidar(): void {
     if (this.estado !== EstadoReservaEnum.ACTIVA) {
-      throw new Error('Solo se pueden consolidar reservas activas');
+      throw new EstadoInvalidoError('Solo se pueden consolidar reservas activas');
     }
     this.estado = EstadoReservaEnum.CONSOLIDADA;
     this.fechaResolucion = new Date();
@@ -73,7 +74,7 @@ export class Reserva {
 
   liberar(): void {
     if (this.estado !== EstadoReservaEnum.ACTIVA) {
-      throw new Error('Solo se pueden liberar reservas activas');
+      throw new EstadoInvalidoError('Solo se pueden liberar reservas activas');
     }
     this.estado = EstadoReservaEnum.LIBERADA;
     this.fechaResolucion = new Date();
@@ -81,7 +82,7 @@ export class Reserva {
 
   expirar(): void {
     if (this.estado !== EstadoReservaEnum.ACTIVA) {
-      throw new Error('Solo se pueden expirar reservas activas');
+      throw new EstadoInvalidoError('Solo se pueden expirar reservas activas');
     }
     this.estado = EstadoReservaEnum.EXPIRADA;
     this.fechaResolucion = new Date();

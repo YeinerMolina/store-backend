@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EntidadNoEncontradaError } from '../../../../shared/exceptions/domain.exception';
 import type { InventarioRepository } from '../../domain/ports/outbound/inventario.repository';
 import type { ReservaRepository } from '../../domain/ports/outbound/reserva.repository';
 import type { MovimientoInventarioRepository } from '../../domain/ports/outbound/movimiento-inventario.repository';
@@ -29,10 +30,10 @@ export class InventarioApplicationService implements InventarioService {
   private readonly UMBRAL_STOCK_BAJO = 10;
 
   constructor(
-    private readonly inventarioRepo: any,
-    private readonly reservaRepo: any,
-    private readonly movimientoRepo: any,
-    private readonly eventBus: any,
+    private readonly inventarioRepo: InventarioRepository,
+    private readonly reservaRepo: ReservaRepository,
+    private readonly movimientoRepo: MovimientoInventarioRepository,
+    private readonly eventBus: EventBusPort,
   ) {}
 
   async reservarInventario(
@@ -89,9 +90,7 @@ export class InventarioApplicationService implements InventarioService {
     );
 
     if (reservas.length === 0) {
-      throw new Error(
-        `No se encontró reserva activa para operación ${request.operacionId}`,
-      );
+      throw new EntidadNoEncontradaError('Reserva', request.operacionId);
     }
 
     const reserva = reservas[0];
@@ -101,7 +100,7 @@ export class InventarioApplicationService implements InventarioService {
       reserva.inventarioId,
     );
     if (!inventario) {
-      throw new Error(`Inventario no encontrado: ${reserva.inventarioId}`);
+      throw new EntidadNoEncontradaError('Inventario', reserva.inventarioId);
     }
 
     // Consolidar en dominio
@@ -154,7 +153,7 @@ export class InventarioApplicationService implements InventarioService {
     );
 
     if (!inventario) {
-      throw new Error(`Inventario no encontrado: ${request.inventarioId}`);
+      throw new EntidadNoEncontradaError('Inventario', request.inventarioId);
     }
 
     // TODO: Validar permisos empleado (SEGURIDAD)
@@ -215,7 +214,7 @@ export class InventarioApplicationService implements InventarioService {
     );
 
     if (!inventario) {
-      throw new Error(`Inventario no encontrado para ${tipoItem}/${itemId}`);
+      throw new EntidadNoEncontradaError('Inventario', `${tipoItem}/${itemId}`);
     }
 
     return InventarioMapper.toResponse(inventario);

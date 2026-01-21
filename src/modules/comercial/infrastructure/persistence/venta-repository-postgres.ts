@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from '../../../../shared/database/prisma.service';
 import { UUID } from '../../../../shared/domain/value-objects/uuid.vo';
 import type { VentaRepository } from '../../domain/ports/outbound/venta-repository.port';
 import type { Venta } from '../../domain/aggregates/venta.aggregate';
@@ -20,18 +20,18 @@ import { VentaPersistenceMapper } from './mappers/venta-persistence.mapper';
  */
 @Injectable()
 export class VentaRepositoryPostgres implements VentaRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prismaService: PrismaService) {}
 
   async save(venta: Venta): Promise<void> {
     const prismaData = VentaPersistenceMapper.toPrisma(venta);
 
-    await this.prisma.venta.create({
+    await this.prismaService.prisma.venta.create({
       data: prismaData,
     });
   }
 
   async findById(id: UUID): Promise<Venta | null> {
-    const prismaVenta = await this.prisma.venta.findUnique({
+    const prismaVenta = await this.prismaService.prisma.venta.findUnique({
       where: { id: id.toString() },
       include: {
         lineas_venta: true,
@@ -46,7 +46,7 @@ export class VentaRepositoryPostgres implements VentaRepository {
   }
 
   async findByClienteId(clienteId: UUID): Promise<Venta[]> {
-    const prismaVentas = await this.prisma.venta.findMany({
+    const prismaVentas = await this.prismaService.prisma.venta.findMany({
       where: { cliente_id: clienteId.toString() },
       include: {
         lineas_venta: true,
@@ -60,7 +60,7 @@ export class VentaRepositoryPostgres implements VentaRepository {
   async update(venta: Venta): Promise<void> {
     const prismaData = VentaPersistenceMapper.toPrisma(venta);
 
-    await this.prisma.venta.update({
+    await this.prismaService.prisma.venta.update({
       where: { id: venta.getId().toString() },
       data: prismaData,
     });

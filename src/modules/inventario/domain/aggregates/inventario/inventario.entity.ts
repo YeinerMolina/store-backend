@@ -12,6 +12,10 @@ import { MovimientoInventario } from './movimiento-inventario.entity';
 import { InventarioReservado } from '../../events/inventario-reservado.event';
 import { InventarioDescontado } from '../../events/inventario-descontado.event';
 import { InventarioAjustado } from '../../events/inventario-ajustado.event';
+import {
+  StockInsuficienteError,
+  EstadoInvalidoError,
+} from '../../../../../shared/exceptions/domain.exception';
 
 export class Inventario {
   id: string;
@@ -73,8 +77,9 @@ export class Inventario {
     const cantidadSolicitada = Cantidad.crear(props.cantidad);
 
     if (!this.cantidadDisponible.esMayorOIgualA(cantidadSolicitada)) {
-      throw new Error(
-        `Stock insuficiente: disponible ${this.cantidadDisponible.obtenerValor()}, solicitado ${props.cantidad}`,
+      throw new StockInsuficienteError(
+        this.cantidadDisponible.obtenerValor(),
+        props.cantidad,
       );
     }
 
@@ -108,7 +113,9 @@ export class Inventario {
 
   consolidarReserva(reserva: Reserva): MovimientoInventario {
     if (reserva.estado !== EstadoReservaEnum.ACTIVA) {
-      throw new Error('Solo se pueden consolidar reservas activas');
+      throw new EstadoInvalidoError(
+        'Solo se pueden consolidar reservas activas',
+      );
     }
 
     const cantidadReservada = Cantidad.crear(reserva.cantidad);
@@ -137,7 +144,7 @@ export class Inventario {
 
   liberarReserva(reserva: Reserva): MovimientoInventario {
     if (reserva.estado !== EstadoReservaEnum.ACTIVA) {
-      throw new Error('Solo se pueden liberar reservas activas');
+      throw new EstadoInvalidoError('Solo se pueden liberar reservas activas');
     }
 
     const cantidadReservada = Cantidad.crear(reserva.cantidad);
@@ -174,8 +181,9 @@ export class Inventario {
       this.cantidadDisponible = this.cantidadDisponible.sumar(cantidadAjuste);
     } else {
       if (!this.cantidadDisponible.esMayorOIgualA(cantidadAjuste)) {
-        throw new Error(
-          `No hay stock suficiente para ajustar: disponible ${cantidadAnterior}, ajuste -${props.cantidad}`,
+        throw new StockInsuficienteError(
+          cantidadAnterior,
+          Math.abs(props.cantidad),
         );
       }
       this.cantidadDisponible = this.cantidadDisponible.restar(cantidadAjuste);

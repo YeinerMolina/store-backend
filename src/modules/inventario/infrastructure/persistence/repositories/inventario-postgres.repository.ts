@@ -3,6 +3,7 @@ import { Inventario } from '../../../domain/aggregates/inventario/inventario.ent
 import type { InventarioRepository } from '../../../domain/ports/outbound/inventario.repository';
 import { PrismaInventarioMapper } from '../mappers/prisma-inventario.mapper';
 import { PrismaService } from '../../../../../shared/database/prisma.service';
+import { OptimisticLockingError } from '../../../../../shared/exceptions/domain.exception';
 
 @Injectable()
 export class InventarioPostgresRepository implements InventarioRepository {
@@ -12,11 +13,30 @@ export class InventarioPostgresRepository implements InventarioRepository {
     const data = PrismaInventarioMapper.toPersistence(inventario);
     const prisma = this.prismaService.prisma;
 
-    await prisma.inventario.upsert({
+    // Verificar si existe
+    const existe = await prisma.inventario.findUnique({
       where: { id: inventario.id },
-      update: data,
-      create: data,
     });
+
+    if (!existe) {
+      // Crear nuevo - no hay riesgo de optimistic locking
+      await prisma.inventario.create({ data });
+    } else {
+      // Actualizar con optimistic locking
+      const versionAnterior = data.version - 1;
+
+      const resultado = await prisma.inventario.updateMany({
+        where: {
+          id: inventario.id,
+          version: versionAnterior,
+        },
+        data,
+      });
+
+      if (resultado.count === 0) {
+        throw new OptimisticLockingError('Inventario', inventario.id);
+      }
+    }
   }
 
   async buscarPorId(id: string): Promise<Inventario | null> {
@@ -59,11 +79,30 @@ export class InventarioPostgresRepository implements InventarioRepository {
     await prisma.$transaction(async () => {
       const data = PrismaInventarioMapper.toPersistence(inventario);
 
-      await prisma.inventario.upsert({
+      // Intentar crear nuevo inventario
+      const existe = await prisma.inventario.findUnique({
         where: { id: inventario.id },
-        update: data,
-        create: data,
       });
+
+      if (!existe) {
+        // Crear nuevo - no hay riesgo de optimistic locking
+        await prisma.inventario.create({ data });
+      } else {
+        // Actualizar existente con optimistic locking
+        const versionAnterior = data.version - 1;
+
+        const resultado = await prisma.inventario.updateMany({
+          where: {
+            id: inventario.id,
+            version: versionAnterior,
+          },
+          data,
+        });
+
+        if (resultado.count === 0) {
+          throw new OptimisticLockingError('Inventario', inventario.id);
+        }
+      }
 
       if (operacionesAdicionales) {
         await operacionesAdicionales();

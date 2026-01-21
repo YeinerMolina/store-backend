@@ -5,6 +5,10 @@ import type { ConsultarDisponibilidadRequestDto } from '../../../application/dto
 import type { ReservaResponseDto } from '../../../application/dto/reserva-response.dto';
 import type { DisponibilidadResponseDto } from '../../../application/dto/disponibilidad-response.dto';
 import type { InventarioResponseDto } from '../../../application/dto/inventario-response.dto';
+import { INVENTARIO_SERVICE_TOKEN } from '../tokens';
+
+// Re-exportar token para conveniencia
+export { INVENTARIO_SERVICE_TOKEN };
 
 /**
  * Puerto de entrada (Inbound) del módulo INVENTARIO

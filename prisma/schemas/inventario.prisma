@@ -1,32 +1,4 @@
 // ============================================================================
-// PRISMA SCHEMA - AUTO-GENERADO
-// ============================================================================
-// ⚠️  NO EDITAR DIRECTAMENTE - Este archivo se genera automáticamente
-//
-// Para modificar el schema:
-//   1. Editar archivos en prisma/schemas/
-//   2. Ejecutar: npm run schema:merge
-//
-// Generado: 2026-01-21T20:15:42.136Z
-// Fuentes: base.prisma, inventario.prisma
-// ============================================================================
-
-// ============================================================================
-// CONFIGURACIÓN BASE DE PRISMA
-// ============================================================================
-// Este archivo contiene la configuración del generador y datasource
-// 
-// NOTA: En Prisma 7+, la URL de conexión se configura en prisma.config.ts
-
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "postgresql"
-}
-
-// ============================================================================
 // MÓDULO: INVENTARIO
 // ============================================================================
 // Bounded Context: Control de existencias, reservas y movimientos de stock

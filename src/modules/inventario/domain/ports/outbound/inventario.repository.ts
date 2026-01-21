@@ -1,4 +1,8 @@
 import { Inventario } from '../../aggregates/inventario/inventario.entity';
+import { INVENTARIO_REPOSITORY_TOKEN } from '../tokens';
+
+// Re-exportar token para conveniencia
+export { INVENTARIO_REPOSITORY_TOKEN };
 
 export interface InventarioRepository {
   guardar(inventario: Inventario): Promise<void>;

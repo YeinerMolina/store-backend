@@ -7,6 +7,15 @@ import { MovimientoInventarioPostgresRepository } from './persistence/repositori
 import { EventBusConsoleAdapter } from './adapters/event-bus-console.adapter';
 import { InventarioController } from './controllers/inventario.controller';
 
+// Tokens de inyección de dependencias
+import {
+  INVENTARIO_SERVICE_TOKEN,
+  INVENTARIO_REPOSITORY_TOKEN,
+  RESERVA_REPOSITORY_TOKEN,
+  MOVIMIENTO_INVENTARIO_REPOSITORY_TOKEN,
+  EVENT_BUS_PORT_TOKEN,
+} from '../domain/ports/tokens';
+
 @Module({
   providers: [
     PrismaService,
@@ -15,23 +24,23 @@ import { InventarioController } from './controllers/inventario.controller';
     MovimientoInventarioPostgresRepository,
     EventBusConsoleAdapter,
     {
-      provide: 'INVENTARIO_REPOSITORY',
+      provide: INVENTARIO_REPOSITORY_TOKEN,
       useClass: InventarioPostgresRepository,
     },
     {
-      provide: 'RESERVA_REPOSITORY',
+      provide: RESERVA_REPOSITORY_TOKEN,
       useClass: ReservaPostgresRepository,
     },
     {
-      provide: 'MOVIMIENTO_INVENTARIO_REPOSITORY',
+      provide: MOVIMIENTO_INVENTARIO_REPOSITORY_TOKEN,
       useClass: MovimientoInventarioPostgresRepository,
     },
     {
-      provide: 'EVENT_BUS_PORT',
+      provide: EVENT_BUS_PORT_TOKEN,
       useClass: EventBusConsoleAdapter,
     },
     {
-      provide: 'INVENTARIO_SERVICE',
+      provide: INVENTARIO_SERVICE_TOKEN,
       useFactory: (inventarioRepo, reservaRepo, movimientoRepo, eventBus) => {
         return new InventarioApplicationService(
           inventarioRepo,
@@ -41,14 +50,14 @@ import { InventarioController } from './controllers/inventario.controller';
         );
       },
       inject: [
-        'INVENTARIO_REPOSITORY',
-        'RESERVA_REPOSITORY',
-        'MOVIMIENTO_INVENTARIO_REPOSITORY',
-        'EVENT_BUS_PORT',
+        INVENTARIO_REPOSITORY_TOKEN,
+        RESERVA_REPOSITORY_TOKEN,
+        MOVIMIENTO_INVENTARIO_REPOSITORY_TOKEN,
+        EVENT_BUS_PORT_TOKEN,
       ],
     },
   ],
   controllers: [InventarioController],
-  exports: ['INVENTARIO_SERVICE'],
+  exports: [INVENTARIO_SERVICE_TOKEN],
 })
 export class InventarioModule {}

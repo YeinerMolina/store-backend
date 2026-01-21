@@ -1,4 +1,8 @@
 import { Reserva } from '../../aggregates/inventario/reserva.entity';
+import { RESERVA_REPOSITORY_TOKEN } from '../tokens';
+
+// Re-exportar token para conveniencia
+export { RESERVA_REPOSITORY_TOKEN };
 
 export interface ReservaRepository {
   guardar(reserva: Reserva): Promise<void>;

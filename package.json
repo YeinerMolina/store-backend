@@ -18,13 +18,14 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:migrate:dev": "prisma migrate dev",
-    "db:migrate:deploy": "prisma migrate deploy",
+    "schema:merge": "node prisma/merge-schemas.js",
+    "db:generate": "npm run schema:merge && prisma generate",
+    "db:push": "npm run schema:merge && prisma db push",
+    "db:migrate:dev": "npm run schema:merge && prisma migrate dev",
+    "db:migrate:deploy": "npm run schema:merge && prisma migrate deploy",
     "db:seed": "ts-node prisma/seed.ts",
     "db:format": "prisma format",
-    "postinstall": "prisma generate"
+    "postinstall": "npm run schema:merge && prisma generate"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -32,7 +33,8 @@
     "@nestjs/platform-express": "^11.0.1",
     "@prisma/client": "^7.2.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

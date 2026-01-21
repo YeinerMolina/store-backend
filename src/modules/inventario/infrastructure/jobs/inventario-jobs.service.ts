@@ -1,10 +1,11 @@
 import { Injectable, Inject } from '@nestjs/common';
 import type { InventarioService } from '../../domain/ports/inbound/inventario.service';
+import { INVENTARIO_SERVICE_TOKEN } from '../../domain/ports/tokens';
 
 @Injectable()
 export class InventarioJobsService {
   constructor(
-    @Inject('INVENTARIO_SERVICE')
+    @Inject(INVENTARIO_SERVICE_TOKEN)
     private readonly inventarioService: InventarioService,
   ) {}
 

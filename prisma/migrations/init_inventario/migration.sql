@@ -15,10 +15,10 @@ CREATE TYPE "tipo_actor" AS ENUM ('EMPLEADO', 'CLIENTE', 'SISTEMA');
 
 -- CreateTable
 CREATE TABLE "inventario" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
     "tipo_item" "tipo_item" NOT NULL,
-    "item_id" TEXT NOT NULL,
-    "ubicacion" TEXT,
+    "item_id" UUID NOT NULL,
+    "ubicacion" VARCHAR(50),
     "cantidad_disponible" INTEGER NOT NULL DEFAULT 0,
     "cantidad_reservada" INTEGER NOT NULL DEFAULT 0,
     "cantidad_abandono" INTEGER NOT NULL DEFAULT 0,
@@ -30,32 +30,32 @@ CREATE TABLE "inventario" (
 
 -- CreateTable
 CREATE TABLE "reserva" (
-    "id" TEXT NOT NULL,
-    "inventario_id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
+    "inventario_id" UUID NOT NULL,
     "tipo_operacion" "tipo_operacion" NOT NULL,
-    "operacion_id" TEXT NOT NULL,
+    "operacion_id" UUID NOT NULL,
     "cantidad" INTEGER NOT NULL,
     "estado" "estado_reserva" NOT NULL DEFAULT 'ACTIVA',
     "fecha_creacion" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "fecha_expiracion" TIMESTAMP(3) NOT NULL,
     "fecha_resolucion" TIMESTAMP(3),
     "actor_tipo" "tipo_actor" NOT NULL,
-    "actor_id" TEXT NOT NULL,
+    "actor_id" UUID NOT NULL,
 
     CONSTRAINT "reserva_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "movimiento_inventario" (
-    "id" TEXT NOT NULL,
-    "inventario_id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
+    "inventario_id" UUID NOT NULL,
     "tipo_movimiento" "tipo_movimiento" NOT NULL,
     "cantidad" INTEGER NOT NULL,
     "cantidad_anterior" INTEGER NOT NULL,
     "cantidad_posterior" INTEGER NOT NULL,
     "tipo_operacion_origen" "tipo_operacion",
-    "operacion_origen_id" TEXT,
-    "empleado_id" TEXT,
+    "operacion_origen_id" UUID,
+    "empleado_id" UUID,
     "intencion" VARCHAR(200),
     "notas" TEXT,
     "fecha_movimiento" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -95,3 +95,7 @@ ALTER TABLE "reserva" ADD CONSTRAINT "reserva_inventario_id_fkey" FOREIGN KEY ("
 
 -- AddForeignKey
 ALTER TABLE "movimiento_inventario" ADD CONSTRAINT "movimiento_inventario_inventario_id_fkey" FOREIGN KEY ("inventario_id") REFERENCES "inventario"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddCheckConstraints
+ALTER TABLE "inventario" ADD CONSTRAINT "chk_cantidad_disponible_positiva" CHECK ("cantidad_disponible" >= 0);
+ALTER TABLE "inventario" ADD CONSTRAINT "chk_cantidad_reservada_positiva" CHECK ("cantidad_reservada" >= 0);

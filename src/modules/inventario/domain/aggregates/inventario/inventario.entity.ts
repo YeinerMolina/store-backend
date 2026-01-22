@@ -12,10 +12,7 @@ import { MovimientoInventario } from './movimiento-inventario.entity';
 import { InventarioReservado } from '../../events/inventario-reservado.event';
 import { InventarioDescontado } from '../../events/inventario-descontado.event';
 import { InventarioAjustado } from '../../events/inventario-ajustado.event';
-import {
-  StockInsuficienteError,
-  EstadoInvalidoError,
-} from '../../../../../shared/exceptions/domain.exception';
+import { StockInsuficienteError, EstadoInvalidoError } from '../../exceptions';
 
 export class Inventario {
   id: string;

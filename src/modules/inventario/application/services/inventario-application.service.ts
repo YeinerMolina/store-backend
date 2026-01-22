@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { EntidadNoEncontradaError } from '../../../../shared/exceptions/domain.exception';
+import { EntidadNoEncontradaError } from '../../domain/exceptions';
 import type { InventarioRepository } from '../../domain/ports/outbound/inventario.repository';
 import type { ReservaRepository } from '../../domain/ports/outbound/reserva.repository';
 import type { MovimientoInventarioRepository } from '../../domain/ports/outbound/movimiento-inventario.repository';

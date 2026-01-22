@@ -6,8 +6,6 @@ import { ReservaPostgresRepository } from './persistence/repositories/reserva-po
 import { MovimientoInventarioPostgresRepository } from './persistence/repositories/movimiento-inventario-postgres.repository';
 import { EventBusConsoleAdapter } from './adapters/event-bus-console.adapter';
 import { InventarioController } from './controllers/inventario.controller';
-
-// Tokens de inyección de dependencias
 import {
   INVENTARIO_SERVICE_TOKEN,
   INVENTARIO_REPOSITORY_TOKEN,

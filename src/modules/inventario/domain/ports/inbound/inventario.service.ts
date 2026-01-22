@@ -7,7 +7,6 @@ import type { DisponibilidadResponseDto } from '../../../application/dto/disponi
 import type { InventarioResponseDto } from '../../../application/dto/inventario-response.dto';
 import { INVENTARIO_SERVICE_TOKEN } from '../tokens';
 
-// Re-exportar token para conveniencia
 export { INVENTARIO_SERVICE_TOKEN };
 
 /**

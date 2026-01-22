@@ -1,9 +1,4 @@
-// ============================================================================
-// CONFIGURACIÓN BASE DE PRISMA
-// ============================================================================
-// Este archivo contiene la configuración del generador y datasource
-// 
-// NOTA: En Prisma 7+, la URL de conexión se configura en prisma.config.ts
+// Datasource URL configured in prisma.config.ts
 
 generator client {
   provider = "prisma-client-js"

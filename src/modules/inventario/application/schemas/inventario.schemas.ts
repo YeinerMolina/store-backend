@@ -1,18 +1,5 @@
 /**
- * SCHEMAS DE VALIDACIÓN CON ZOD - MÓDULO INVENTARIO
- *
- * Schemas centralizados para todos los DTOs del módulo INVENTARIO
- *
- * CONVENCIÓN:
- * - Nombre: {DTO}Schema
- * - Export: Named exports
- * - Tipos inferidos: export type {DTO} = z.infer<typeof {DTO}Schema>
- *
- * VENTAJAS:
- * - Single source of truth para validaciones
- * - Type-safety automático
- * - Reutilización fácil
- * - Composición de schemas
+ * Schemas de validación Zod para el módulo INVENTARIO.
  */
 
 import { z } from 'zod';
@@ -24,39 +11,20 @@ import {
   createEnumSchema,
 } from '../../../../shared/validation/common.schemas';
 
-// ============================================================================
-// SCHEMAS BASE (Específicos de Inventario)
-// ============================================================================
-
-/**
- * Cantidad positiva (alias para claridad)
- */
 const CantidadPositivaSchema = PositiveIntSchema;
 
-/**
- * Tipo de Item (PRODUCTO | PAQUETE)
- */
 const TipoItemSchema = z.enum(['PRODUCTO', 'PAQUETE'], {
   message: 'Debe ser PRODUCTO o PAQUETE',
 });
 
-/**
- * Tipo de Operación (VENTA | CAMBIO | AJUSTE)
- */
 const TipoOperacionSchema = z.enum(['VENTA', 'CAMBIO', 'AJUSTE'], {
   message: 'Debe ser VENTA, CAMBIO o AJUSTE',
 });
 
-/**
- * Tipo de Actor (EMPLEADO | CLIENTE | SISTEMA)
- */
 const TipoActorSchema = z.enum(['EMPLEADO', 'CLIENTE', 'SISTEMA'], {
   message: 'Debe ser EMPLEADO, CLIENTE o SISTEMA',
 });
 
-/**
- * Estado de Reserva
- */
 const EstadoReservaSchema = z.enum(
   ['ACTIVA', 'CONSOLIDADA', 'LIBERADA', 'EXPIRADA'],
   {
@@ -64,15 +32,6 @@ const EstadoReservaSchema = z.enum(
   },
 );
 
-// ============================================================================
-// REQUEST SCHEMAS
-// ============================================================================
-
-/**
- * Schema para reservar inventario
- *
- * Endpoint: POST /inventario/reservar
- */
 export const ReservarInventarioSchema = z.object({
   tipoItem: TipoItemSchema,
   itemId: UUIDSchema,
@@ -85,25 +44,13 @@ export const ReservarInventarioSchema = z.object({
 
 export type ReservarInventarioDto = z.infer<typeof ReservarInventarioSchema>;
 
-/**
- * Schema para consolidar reserva
- *
- * Endpoint: POST /inventario/consolidar
- *
- * NOTA: El servicio busca la reserva por operacionId
- */
 export const ConsolidarReservaSchema = z.object({
-  reservaId: UUIDSchema, // Requerido por el DTO antiguo (aunque no se usa)
+  reservaId: UUIDSchema,
   operacionId: UUIDSchema,
 });
 
 export type ConsolidarReservaDto = z.infer<typeof ConsolidarReservaSchema>;
 
-/**
- * Schema para ajustar inventario
- *
- * Endpoint: POST /inventario/ajustar
- */
 export const AjustarInventarioSchema = z.object({
   inventarioId: UUIDSchema,
   cantidad: z
@@ -123,11 +70,7 @@ export const AjustarInventarioSchema = z.object({
 export type AjustarInventarioDto = z.infer<typeof AjustarInventarioSchema>;
 
 /**
- * Schema para consultar disponibilidad
- *
- * Endpoint: GET /inventario/disponibilidad?tipoItem=PRODUCTO&itemId=...&cantidad=5
- *
- * NOTA: Los query params llegan como strings, por eso usamos coerce
+ * Query params llegan como strings, por eso usamos coerce.
  */
 export const ConsultarDisponibilidadSchema = z.object({
   tipoItem: TipoItemSchema,
@@ -139,13 +82,6 @@ export type ConsultarDisponibilidadDto = z.infer<
   typeof ConsultarDisponibilidadSchema
 >;
 
-// ============================================================================
-// RESPONSE SCHEMAS (Opcional - para documentación)
-// ============================================================================
-
-/**
- * Schema de respuesta para Reserva
- */
 export const ReservaResponseSchema = z.object({
   id: UUIDSchema,
   inventarioId: UUIDSchema,
@@ -159,9 +95,6 @@ export const ReservaResponseSchema = z.object({
 
 export type ReservaResponseDto = z.infer<typeof ReservaResponseSchema>;
 
-/**
- * Schema de respuesta para Disponibilidad
- */
 export const DisponibilidadResponseSchema = z.object({
   disponible: z.boolean(),
   cantidadDisponible: z.number().int().nonnegative(),
@@ -173,9 +106,6 @@ export type DisponibilidadResponseDto = z.infer<
   typeof DisponibilidadResponseSchema
 >;
 
-/**
- * Schema de respuesta para Inventario
- */
 export const InventarioResponseSchema = z.object({
   id: UUIDSchema,
   tipoItem: TipoItemSchema,

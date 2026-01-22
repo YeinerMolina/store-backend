@@ -39,7 +39,6 @@ export class InventarioApplicationService implements InventarioService {
   async reservarInventario(
     request: ReservarInventarioRequestDto,
   ): Promise<ReservaResponseDto> {
-    // Buscar o crear inventario
     let inventario = await this.inventarioRepo.buscarPorItem(
       request.tipoItem,
       request.itemId,
@@ -53,13 +52,11 @@ export class InventarioApplicationService implements InventarioService {
       await this.inventarioRepo.guardar(inventario);
     }
 
-    // Calcular duración de reserva
     const duracionMinutos =
       request.tipoOperacion === TipoOperacionEnum.CAMBIO
         ? this.DURACION_RESERVA_CAMBIO_MINUTOS
         : this.DURACION_RESERVA_VENTA_MINUTOS;
 
-    // Reservar en dominio
     const reserva = inventario.reservar({
       cantidad: request.cantidad,
       operacionId: request.operacionId,
@@ -69,12 +66,10 @@ export class InventarioApplicationService implements InventarioService {
       minutosExpiracion: duracionMinutos,
     });
 
-    // Guardar cambios atomicamente
     await this.inventarioRepo.guardarConTransaction(inventario, async () => {
       await this.reservaRepo.guardar(reserva);
     });
 
-    // Publicar eventos
     for (const evento of inventario.getDomainEvents()) {
       await this.eventBus.publicar(evento);
     }
@@ -84,7 +79,6 @@ export class InventarioApplicationService implements InventarioService {
   }
 
   async consolidarReserva(request: ConsolidarReservaRequestDto): Promise<void> {
-    // Buscar reserva
     const reservas = await this.reservaRepo.buscarActivasPorOperacion(
       request.operacionId,
     );
@@ -95,7 +89,6 @@ export class InventarioApplicationService implements InventarioService {
 
     const reserva = reservas[0];
 
-    // Buscar inventario
     const inventario = await this.inventarioRepo.buscarPorId(
       reserva.inventarioId,
     );
@@ -103,17 +96,14 @@ export class InventarioApplicationService implements InventarioService {
       throw new EntidadNoEncontradaError('Inventario', reserva.inventarioId);
     }
 
-    // Consolidar en dominio
     reserva.consolidar();
     const movimiento = inventario.consolidarReserva(reserva);
 
-    // Guardar atomicamente
     await this.inventarioRepo.guardarConTransaction(inventario, async () => {
       await this.reservaRepo.actualizar(reserva);
       await this.movimientoRepo.guardar(movimiento);
     });
 
-    // Publicar eventos
     for (const evento of inventario.getDomainEvents()) {
       await this.eventBus.publicar(evento);
     }
@@ -155,8 +145,6 @@ export class InventarioApplicationService implements InventarioService {
     if (!inventario) {
       throw new EntidadNoEncontradaError('Inventario', request.inventarioId);
     }
-
-    // TODO: Validar permisos empleado (SEGURIDAD)
 
     const movimiento = inventario.ajustar({
       cantidad: request.cantidad,

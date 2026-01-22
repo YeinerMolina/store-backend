@@ -1,15 +1,9 @@
 /**
- * Excepción base para errores de dominio
+ * Excepción base para errores de dominio.
+ * Todas las excepciones de negocio deben heredar de esta clase.
  */
 export abstract class DomainException extends Error {
-  /**
-   * Código único del error
-   */
   abstract readonly code: string;
-
-  /**
-   * Código de estado HTTP sugerido
-   */
   abstract readonly statusCode: number;
 
   constructor(message: string) {
@@ -19,9 +13,6 @@ export abstract class DomainException extends Error {
   }
 }
 
-/**
- * Error cuando no hay stock suficiente para reservar
- */
 export class StockInsuficienteError extends DomainException {
   readonly code = 'STOCK_INSUFICIENTE';
   readonly statusCode = 409;
@@ -36,9 +27,6 @@ export class StockInsuficienteError extends DomainException {
   }
 }
 
-/**
- * Error de optimistic locking - versión de entidad ha cambiado
- */
 export class OptimisticLockingError extends DomainException {
   readonly code = 'OPTIMISTIC_LOCK_CONFLICT';
   readonly statusCode = 409;
@@ -53,9 +41,6 @@ export class OptimisticLockingError extends DomainException {
   }
 }
 
-/**
- * Error cuando una entidad no se encuentra
- */
 export class EntidadNoEncontradaError extends DomainException {
   readonly code = 'ENTIDAD_NO_ENCONTRADA';
   readonly statusCode = 404;
@@ -68,9 +53,6 @@ export class EntidadNoEncontradaError extends DomainException {
   }
 }
 
-/**
- * Error cuando el estado de una entidad no permite la operación
- */
 export class EstadoInvalidoError extends DomainException {
   readonly code = 'ESTADO_INVALIDO';
   readonly statusCode = 400;
@@ -80,9 +62,6 @@ export class EstadoInvalidoError extends DomainException {
   }
 }
 
-/**
- * Error cuando un empleado no tiene los permisos necesarios
- */
 export class PermisoInsuficienteError extends DomainException {
   readonly code = 'PERMISO_INSUFICIENTE';
   readonly statusCode = 403;

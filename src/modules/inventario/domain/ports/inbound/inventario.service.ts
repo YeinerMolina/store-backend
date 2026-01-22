@@ -11,56 +11,40 @@ import { INVENTARIO_SERVICE_TOKEN } from '../tokens';
 export { INVENTARIO_SERVICE_TOKEN };
 
 /**
- * Puerto de entrada (Inbound) del módulo INVENTARIO
- * Define los casos de uso disponibles
+ * Puerto Inbound: Define los casos de uso del módulo INVENTARIO.
+ * Implementado por InventarioApplicationService.
  */
 export interface InventarioService {
   /**
-   * Reserva stock para una venta o cambio
-   * @throws StockInsuficienteError si no hay disponibilidad
-   * @throws OptimisticLockingError si hay conflicto de concurrencia
+   * @throws StockInsuficienteError, OptimisticLockingError
    */
   reservarInventario(
     request: ReservarInventarioRequestDto,
   ): Promise<ReservaResponseDto>;
 
   /**
-   * Consolida una reserva cuando la venta/cambio se completa exitosamente
-   * @throws EntidadNoEncontradaError si la reserva no existe
-   * @throws EstadoInvalidoError si la reserva no está ACTIVA
+   * @throws EntidadNoEncontradaError, EstadoInvalidoError
    */
   consolidarReserva(request: ConsolidarReservaRequestDto): Promise<void>;
 
-  /**
-   * Job que libera reservas expiradas (ejecutar cada minuto)
-   */
   liberarReservasExpiradas(): Promise<void>;
 
   /**
-   * Ajuste manual de inventario por un empleado
-   * @throws EntidadNoEncontradaError si el inventario no existe
-   * @throws PermisoInsuficienteError si el empleado no tiene permisos
+   * @throws EntidadNoEncontradaError, PermisoInsuficienteError
    */
   ajustarInventario(request: AjustarInventarioRequestDto): Promise<void>;
 
-  /**
-   * Consulta si hay disponibilidad de un producto/paquete
-   */
   consultarDisponibilidad(
     request: ConsultarDisponibilidadRequestDto,
   ): Promise<DisponibilidadResponseDto>;
 
   /**
-   * Obtiene el inventario de un producto/paquete específico
-   * @throws EntidadNoEncontradaError si no existe inventario
+   * @throws EntidadNoEncontradaError
    */
   obtenerInventarioPorItem(
     tipoItem: string,
     itemId: string,
   ): Promise<InventarioResponseDto>;
 
-  /**
-   * Detecta productos con stock bajo y emite eventos (job diario)
-   */
   detectarStockBajo(umbral: number): Promise<void>;
 }

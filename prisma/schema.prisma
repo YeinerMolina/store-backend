@@ -7,11 +7,12 @@
 //   1. Editar archivos en prisma/schemas/
 //   2. Ejecutar: npm run schema:merge
 //
-// Generado: 2026-01-22T14:25:32.173Z
+// Generado: 2026-01-24T17:46:22.969Z
 // Fuentes: base.prisma, inventario.prisma
 // ============================================================================
 
-// Datasource URL configured in prisma.config.ts
+// En Prisma 7.x la URL se configura en prisma.config.ts
+// y se pasa al constructor de PrismaClient
 
 generator client {
   provider = "prisma-client-js"

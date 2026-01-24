@@ -42,7 +42,7 @@ export class InventarioPostgresRepository implements InventarioRepository {
       where: { id },
     });
 
-    return data ? PrismaInventarioMapper.toDomain(data) : null;
+    return data ? Inventario.desde(data) : null;
   }
 
   async buscarPorItem(
@@ -59,13 +59,13 @@ export class InventarioPostgresRepository implements InventarioRepository {
       },
     });
 
-    return data ? PrismaInventarioMapper.toDomain(data) : null;
+    return data ? Inventario.desde(data) : null;
   }
 
   async buscarTodos(): Promise<Inventario[]> {
     const prisma = this.prismaService.prisma;
     const datos = await prisma.inventario.findMany();
-    return datos.map((data) => PrismaInventarioMapper.toDomain(data));
+    return datos.map((data) => Inventario.desde(data));
   }
 
   async guardarConTransaction(

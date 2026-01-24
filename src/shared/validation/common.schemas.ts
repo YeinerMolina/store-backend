@@ -38,21 +38,18 @@ export const DecimalSchema = (precision: number = 2) =>
       { message: `Máximo ${precision} decimales` },
     );
 
-export const UUIDSchema = z
-  .string()
-  .uuid({ message: 'Debe ser un UUID válido' });
+export const UUIDSchema = z.uuid({ message: 'Debe ser un UUID válido' });
 
 export const UUIDArraySchema = z
   .array(UUIDSchema)
   .min(1, { message: 'Debe contener al menos un ID' });
 
 export const EmailSchema = z
-  .string()
   .email({ message: 'Email inválido' })
-  .toLowerCase()
-  .trim();
+  .trim()
+  .toLowerCase();
 
-export const URLSchema = z.string().url({ message: 'URL inválida' }).trim();
+export const URLSchema = z.url({ message: 'URL inválida' }).trim();
 
 export const PhoneSchema = z
   .string()
@@ -80,19 +77,17 @@ export const SlugSchema = z
     message: 'Solo minúsculas, números y guiones',
   });
 
-export const DateISOSchema = z
-  .string()
-  .datetime({ message: 'Debe ser una fecha ISO 8601 válida' });
+export const DateISOSchema = z.iso.datetime({
+  message: 'Debe ser una fecha ISO 8601 válida',
+});
 
-export const FutureDateSchema = z
-  .string()
+export const FutureDateSchema = z.iso
   .datetime()
   .refine((date) => new Date(date) > new Date(), {
     message: 'Debe ser una fecha futura',
   });
 
-export const PastDateSchema = z
-  .string()
+export const PastDateSchema = z.iso
   .datetime()
   .refine((date) => new Date(date) < new Date(), {
     message: 'Debe ser una fecha pasada',

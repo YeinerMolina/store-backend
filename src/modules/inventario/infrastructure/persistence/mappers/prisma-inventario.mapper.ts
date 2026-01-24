@@ -1,5 +1,11 @@
 import { Inventario } from '../../../domain/aggregates/inventario/inventario.entity';
 
+/**
+ * Mapper para transformar entidades de dominio a formato de persistencia.
+ *
+ * NO incluye toDomain() porque es un mapeo 1:1 que simplemente delega
+ * a Inventario.desde(). Usar directamente la factory del agregado.
+ */
 export class PrismaInventarioMapper {
   static toPersistence(inventario: Inventario) {
     return {
@@ -13,19 +19,5 @@ export class PrismaInventarioMapper {
       version: inventario.version.obtenerNumero(),
       fechaActualizacion: inventario.fechaActualizacion,
     };
-  }
-
-  static toDomain(data: any): Inventario {
-    return Inventario.desde({
-      id: data.id,
-      tipoItem: data.tipoItem,
-      itemId: data.itemId,
-      ubicacion: data.ubicacion,
-      cantidadDisponible: data.cantidadDisponible,
-      cantidadReservada: data.cantidadReservada,
-      cantidadAbandono: data.cantidadAbandono,
-      version: data.version,
-      fechaActualizacion: data.fechaActualizacion,
-    });
   }
 }

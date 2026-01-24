@@ -1,4 +1,5 @@
-// Datasource URL configured in prisma.config.ts
+// En Prisma 7.x la URL se configura en prisma.config.ts
+// y se pasa al constructor de PrismaClient
 
 generator client {
   provider = "prisma-client-js"

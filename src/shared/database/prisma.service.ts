@@ -1,12 +1,14 @@
 import { Injectable } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
 
 @Injectable()
 export class PrismaService {
   private client: any;
 
   constructor() {
-    const { PrismaClient } = require('@prisma/client');
-    this.client = new PrismaClient();
+    // Prisma 7.x con provider legacy (prisma-client-js)
+    // requiere formato datasources.db.url
+    this.client = new PrismaClient(); //{ accelerateUrl: process.env.DATABASE_URL });
   }
 
   get prisma() {

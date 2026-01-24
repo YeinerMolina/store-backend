@@ -6,31 +6,31 @@ import { z } from 'zod';
 import {
   UUIDSchema,
   PositiveIntSchema,
-  NonNegativeIntSchema,
-  StringWithLength,
-  createEnumSchema,
 } from '../../../../shared/validation/common.schemas';
+import {
+  TipoItemEnum,
+  TipoOperacionEnum,
+  EstadoReservaEnum,
+  TipoActorEnum,
+} from '../../domain/aggregates/inventario/types';
 
 const CantidadPositivaSchema = PositiveIntSchema;
 
-const TipoItemSchema = z.enum(['PRODUCTO', 'PAQUETE'], {
+const TipoItemSchema = z.enum(TipoItemEnum, {
   message: 'Debe ser PRODUCTO o PAQUETE',
 });
 
-const TipoOperacionSchema = z.enum(['VENTA', 'CAMBIO', 'AJUSTE'], {
+const TipoOperacionSchema = z.enum(TipoOperacionEnum, {
   message: 'Debe ser VENTA, CAMBIO o AJUSTE',
 });
 
-const TipoActorSchema = z.enum(['EMPLEADO', 'CLIENTE', 'SISTEMA'], {
+const TipoActorSchema = z.enum(TipoActorEnum, {
   message: 'Debe ser EMPLEADO, CLIENTE o SISTEMA',
 });
 
-const EstadoReservaSchema = z.enum(
-  ['ACTIVA', 'CONSOLIDADA', 'LIBERADA', 'EXPIRADA'],
-  {
-    message: 'Debe ser ACTIVA, CONSOLIDADA, LIBERADA o EXPIRADA',
-  },
-);
+const EstadoReservaSchema = z.enum(EstadoReservaEnum, {
+  message: 'Debe ser ACTIVA, CONSOLIDADA, LIBERADA o EXPIRADA',
+});
 
 export const ReservarInventarioSchema = z.object({
   tipoItem: TipoItemSchema,
@@ -87,8 +87,8 @@ export const ReservaResponseSchema = z.object({
   inventarioId: UUIDSchema,
   cantidad: z.number().int().positive(),
   estado: EstadoReservaSchema,
-  fechaCreacion: z.string().datetime(),
-  fechaExpiracion: z.string().datetime(),
+  fechaCreacion: z.iso.datetime(),
+  fechaExpiracion: z.iso.datetime(),
   tipoOperacion: TipoOperacionSchema,
   operacionId: UUIDSchema,
 });

@@ -12,11 +12,11 @@ Backend para tienda retail de productos de vestir con operaciones físicas y dig
 
 **IMPORTANTE:** Lee estos documentos en orden antes de empezar:
 
-| Documento                                                    | Descripción                      | Tiempo |
-| ------------------------------------------------------------ | -------------------------------- | ------ |
-| **[CLAUDE.md](./CLAUDE.md)**                                 | 📖 Visión general del sistema    | 10 min |
-| **[ARQUITECTURA_HEXAGONAL.md](./ARQUITECTURA_HEXAGONAL.md)** | 🏗️ Guía completa de arquitectura | 20 min |
-| **[ARQUITECTURA_DIAGRAMA.md](./ARQUITECTURA_DIAGRAMA.md)**   | 🎨 Diagramas visuales            | 10 min |
+| Documento                                                                      | Descripción                      | Tiempo |
+| ------------------------------------------------------------------------------ | -------------------------------- | ------ |
+| **[CLAUDE.md](./CLAUDE.md)**                                                   | 📖 Visión general del sistema    | 10 min |
+| **[ARQUITECTURA_HEXAGONAL.md](./docs/arquitectura/ARQUITECTURA_HEXAGONAL.md)** | 🏗️ Guía completa de arquitectura | 20 min |
+| **[ARQUITECTURA_DIAGRAMA.md](./docs/arquitectura/ARQUITECTURA_DIAGRAMA.md)**   | 🎨 Diagramas visuales            | 10 min |
 
 ---
 
@@ -209,9 +209,9 @@ it('POST /ventas debe crear venta', async () => {
 ### Para Desarrolladores Nuevos
 
 1. Lee **[QUICKSTART.md](./QUICKSTART.md)** (5 min)
-2. Lee **[ARQUITECTURA_HEXAGONAL.md](./ARQUITECTURA_HEXAGONAL.md)** (20 min)
+2. Lee **[ARQUITECTURA_HEXAGONAL.md](./docs/arquitectura/ARQUITECTURA_HEXAGONAL.md)** (20 min)
 3. Explora `src/modules/comercial/` como ejemplo
-4. Consulta **[ARQUITECTURA_DIAGRAMA.md](./ARQUITECTURA_DIAGRAMA.md)** para visualizaciones
+4. Consulta **[ARQUITECTURA_DIAGRAMA.md](./docs/arquitectura/ARQUITECTURA_DIAGRAMA.md)** para visualizaciones
 
 ### Para Implementar un Módulo Nuevo
 
@@ -278,8 +278,16 @@ store-backend/
 │
 ├── QUICKSTART.md                # ⚡ Inicio rápido
 ├── CLAUDE.md                    # 📖 Visión general
-├── ARQUITECTURA_HEXAGONAL.md    # 🏗️ Guía arquitectura
-├── ARQUITECTURA_DIAGRAMA.md     # 🎨 Diagramas
+├── docs/                         # 📚 Documentación del proyecto
+│   ├── arquitectura/            # 🏗️ Guías de arquitectura
+│   │   ├── ARQUITECTURA_HEXAGONAL.md
+│   │   └── ARQUITECTURA_DIAGRAMA.md
+│   ├── persistencia/            # 💾 Diseño de persistencia
+│   │   └── diseno_persistencia_backend_v2.md
+│   └── patrones/                # 🔧 Patrones y convenciones técnicas
+│       ├── UUID_V7_GUIDE.md
+│       ├── PIPES_VALIDACION.md
+│       └── VALIDACION_SCHEMAS.md
 └── README.md                    # Este archivo
 ```
 
@@ -307,9 +315,9 @@ store-backend/
 
 ## 📞 Contacto y Soporte
 
-- **Documentación**: Ver archivos `.md` en raíz del proyecto
+- **Documentación**: Ver archivos `.md` en carpeta `docs/`
 - **Issues**: Usar GitHub Issues
-- **Preguntas**: Consultar `ARQUITECTURA_HEXAGONAL.md` primero
+- **Preguntas**: Consultar `docs/arquitectura/ARQUITECTURA_HEXAGONAL.md` primero
 
 ---
 

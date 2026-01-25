@@ -44,19 +44,21 @@ Cada módulo sigue esta estructura exacta:
 {modulo}/
 ├── domain/                          ← CAPA 1: NÚCLEO (sin dependencias)
 │   ├── aggregates/                 ← Agregados DDD
-│   │   ├── {agregado}.aggregate.ts
-│   │   └── {entidad}.entity.ts
+│   │   ├── {agregado}/
+│   │   │   ├── {agregado}.entity.ts
+│   │   │   ├── {agregado}.types.ts  ← Props, Data (contratos internos)
+│   │   │   └── types.ts            ← Enums compartidos
 │   │
 │   ├── value-objects/              ← Value Objects inmutables
 │   │   └── {vo}.vo.ts
 │   │
 │   ├── ports/                      ← INTERFACES (contratos)
 │   │   ├── inbound/               ← Casos de uso (QUÉ expone el módulo)
-│   │   │   └── i-{servicio}.service.ts
+│   │   │   └── {servicio}.service.ts
 │   │   │
 │   │   └── outbound/              ← Dependencias (QUÉ necesita el módulo)
-│   │       ├── i-{repositorio}-repository.port.ts
-│   │       └── i-{modulo-externo}.port.ts
+│   │       ├── {repositorio}.repository.ts
+│   │       └── {modulo-externo}.port.ts
 │   │
 │   └── events/                     ← Eventos de dominio
 │       └── {evento}.event.ts
@@ -65,17 +67,18 @@ Cada módulo sigue esta estructura exacta:
 │   ├── services/                   ← Implementan puertos inbound
 │   │   └── {servicio}.service.ts
 │   │
-│   ├── dto/                        ← Data Transfer Objects
-│   │   └── {operacion}.dto.ts
+│   ├── dto/                        ← Data Transfer Objects (API)
+│   │   ├── {operacion}-request.dto.ts
+│   │   └── {entidad}-response.dto.ts
 │   │
 │   └── mappers/                    ← Transformaciones Domain ↔ DTO
 │       └── {entidad}.mapper.ts
 │
 ├── infrastructure/                  ← CAPA 3: ADAPTADORES
 │   ├── persistence/                ← Adaptadores de persistencia
-│   │   ├── prisma-{repo}.repository.ts
+│   │   ├── {repo}.repository.postgres.ts
 │   │   └── mappers/
-│   │       └── {entidad}-persistence.mapper.ts
+│   │       └── {entidad}.persistence.mapper.ts
 │   │
 │   ├── adapters/                   ← Adaptadores a otros módulos
 │   │   └── {modulo}.adapter.ts
@@ -340,6 +343,84 @@ export class ComercialModule {}
 }
 
 // El dominio y application NO cambian ✅
+```
+
+## 📊 Types (Domain) vs DTOs (Application)
+
+### Types del Dominio
+
+**Ubicación**: `domain/aggregates/{entidad}/{entidad}.types.ts`
+
+Interfaces que definen contratos de **métodos del dominio**:
+
+```typescript
+// domain/aggregates/inventario/inventario.types.ts
+export interface ReservarInventarioProps {
+  readonly cantidad: number;
+  readonly tipoOperacion: TipoOperacionEnum; // ← Enum del dominio
+  readonly actorTipo: TipoActorEnum;
+}
+
+export interface InventarioData {
+  readonly id: string;
+  readonly cantidadDisponible: number;
+  // ... datos para reconstruir desde BD
+}
+
+// Usado en:
+class Inventario {
+  reservar(props: ReservarInventarioProps): Reserva {}
+  static desde(data: InventarioData): Inventario {}
+}
+```
+
+**Características**:
+
+- Tipos estrictos del dominio (enums, value objects)
+- Solo se usan DENTRO del dominio
+- Props para factory methods y comandos
+- Data para reconstrucción desde persistencia
+
+### DTOs de Aplicación
+
+**Ubicación**: `application/dto/{operacion}.dto.ts`
+
+Contratos de **entrada/salida de la API**:
+
+```typescript
+// application/dto/reservar-inventario-request.dto.ts
+export class ReservarInventarioRequestDto {
+  tipoItem: string; // ← String primitivo (HTTP)
+  cantidad: number;
+  tipoOperacion: string; // ← String, NO enum
+  actorTipo: string;
+}
+
+// application/dto/inventario-response.dto.ts
+export class InventarioResponseDto {
+  id: string;
+  cantidadDisponible: number;
+  fechaActualizacion: string; // ← String ISO (JSON)
+}
+```
+
+**Características**:
+
+- Tipos primitivos (string, number, boolean)
+- Usados en controllers, GraphQL resolvers
+- Se mapean a Types del dominio en application services
+- Validación con class-validator
+
+### Flujo de Transformación
+
+```
+HTTP Request (JSON)
+    ↓
+ReservarInventarioRequestDto (primitivos)
+    ↓ [Mapper en Application Service]
+ReservarInventarioProps (tipos de dominio)
+    ↓
+Inventario.reservar(props)
 ```
 
 ## 📝 Mappers: Separación de Modelos

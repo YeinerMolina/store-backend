@@ -475,6 +475,69 @@ POR QUÉ 3 MODELOS:
 Cada uno evoluciona independientemente ✅
 ```
 
+## 📋 Types (Domain) vs DTOs (Application)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│         CONTRATOS: Types del Dominio vs DTOs API            │
+└─────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────┐
+│  TYPES (domain/aggregates/{entidad}/{entidad}.types.ts)   │
+│  ────────────────────────────────────────────────────────  │
+│                                                            │
+│  // Contratos INTERNOS del dominio                        │
+│  export interface ReservarInventarioProps {               │
+│    tipoOperacion: TipoOperacionEnum;  ← Enum del dominio  │
+│    actorTipo: TipoActorEnum;                              │
+│  }                                                         │
+│                                                            │
+│  // Para reconstruir desde BD                             │
+│  export interface InventarioData {                        │
+│    id: string;                                            │
+│    cantidadDisponible: number;                            │
+│  }                                                         │
+│                                                            │
+│  USO: class Inventario {                                  │
+│         reservar(props: ReservarInventarioProps) { }      │
+│         static desde(data: InventarioData) { }            │
+│       }                                                    │
+└────────────────────────────────────────────────────────────┘
+                             │
+                             ↓ Mapper en Application Service
+┌────────────────────────────────────────────────────────────┐
+│  DTOs (application/dto/{operacion}.dto.ts)                 │
+│  ────────────────────────────────────────────────────────  │
+│                                                            │
+│  // Contratos EXTERNOS (HTTP/GraphQL)                     │
+│  export class ReservarInventarioRequestDto {              │
+│    tipoOperacion: string;  ← String primitivo desde JSON  │
+│    actorTipo: string;                                     │
+│  }                                                         │
+│                                                            │
+│  export class InventarioResponseDto {                     │
+│    id: string;                                            │
+│    cantidadDisponible: number;                            │
+│    fechaActualizacion: string;  ← ISO string (JSON)       │
+│  }                                                         │
+│                                                            │
+│  USO: @Controller()                                       │
+│       @Post()                                             │
+│       reservar(@Body() dto: ReservarInventarioRequestDto) │
+└────────────────────────────────────────────────────────────┘
+
+FLUJO DE TRANSFORMACIÓN:
+═══════════════════════
+
+HTTP Request (JSON string "VENTA")
+    ↓
+ReservarInventarioRequestDto { tipoOperacion: "VENTA" }
+    ↓ [Mapper valida y transforma]
+ReservarInventarioProps { tipoOperacion: TipoOperacionEnum.VENTA }
+    ↓
+Inventario.reservar(props) ← Lógica de dominio type-safe
+```
+
 ---
 
 **Estos diagramas son referencias visuales de `ARQUITECTURA_HEXAGONAL.md`.**

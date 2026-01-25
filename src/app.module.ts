@@ -1,13 +1,23 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { InventarioModule } from './modules/inventario/infrastructure/inventario.module';
-import { HttpExceptionFilter } from './shared/filters/http-exception.filter';
-import { ApiResponseInterceptor } from './shared/interceptors/api-response.interceptor';
+import { AppController } from './app.controller.js';
+import { AppService } from './app.service.js';
+import { InventarioModule } from './modules/inventario/infrastructure/inventario.module.js';
+import { HttpExceptionFilter } from './shared/filters/http-exception.filter.js';
+import { ApiResponseInterceptor } from './shared/interceptors/api-response.interceptor.js';
+import { validateEnv } from '@shared/infrastructure/config';
 
 @Module({
-  imports: [InventarioModule],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      cache: true,
+      validate: validateEnv,
+      envFilePath: '.env',
+    }),
+    InventarioModule,
+  ],
   controllers: [AppController],
   providers: [
     AppService,

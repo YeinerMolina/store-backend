@@ -342,7 +342,7 @@ describe('Common Schemas', () => {
 - [Zod Documentation](https://zod.dev)
 - [Zod Coercion](https://zod.dev/?id=coercion-for-primitives)
 - [Zod Composition](https://zod.dev/?id=merging)
-- `src/shared/pipes/README.md` - Uso con ZodValidationPipe
+- `docs/patrones/PIPES_VALIDACION.md` - Uso con ZodValidationPipe
 
 ---
 

@@ -22,6 +22,7 @@ import { DisponibilidadResponseDto } from '../dto/disponibilidad-response.dto';
 import { InventarioMapper } from '../mappers/inventario.mapper';
 import { ReservaMapper } from '../mappers/reserva.mapper';
 import { StockBajoDetectado } from '../../domain/events/stock-bajo-detectado.event';
+import { InventarioFactory } from '../../domain/factories';
 
 @Injectable()
 export class InventarioApplicationService implements InventarioService {
@@ -45,7 +46,7 @@ export class InventarioApplicationService implements InventarioService {
     );
 
     if (!inventario) {
-      inventario = Inventario.crear({
+      inventario = InventarioFactory.crear({
         tipoItem: request.tipoItem as TipoItemEnum,
         itemId: request.itemId,
       });
@@ -70,7 +71,7 @@ export class InventarioApplicationService implements InventarioService {
       await this.reservaRepo.guardar(reserva);
     });
 
-    for (const evento of inventario.getDomainEvents()) {
+    for (const evento of inventario.domainEvents) {
       await this.eventBus.publicar(evento);
     }
     inventario.clearDomainEvents();
@@ -104,7 +105,7 @@ export class InventarioApplicationService implements InventarioService {
       await this.movimientoRepo.guardar(movimiento);
     });
 
-    for (const evento of inventario.getDomainEvents()) {
+    for (const evento of inventario.domainEvents) {
       await this.eventBus.publicar(evento);
     }
     inventario.clearDomainEvents();
@@ -130,7 +131,7 @@ export class InventarioApplicationService implements InventarioService {
         await this.movimientoRepo.guardar(movimiento);
       });
 
-      for (const evento of inventario.getDomainEvents()) {
+      for (const evento of inventario.domainEvents) {
         await this.eventBus.publicar(evento);
       }
       inventario.clearDomainEvents();
@@ -157,7 +158,7 @@ export class InventarioApplicationService implements InventarioService {
       await this.movimientoRepo.guardar(movimiento);
     });
 
-    for (const evento of inventario.getDomainEvents()) {
+    for (const evento of inventario.domainEvents) {
       await this.eventBus.publicar(evento);
     }
     inventario.clearDomainEvents();

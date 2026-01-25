@@ -199,12 +199,79 @@ PROHIBIDO:
 
 **Ver**: `CONVENCIONES_NOMBRES.md` para detalles completos.
 
+### Types del Dominio vs DTOs de Aplicación
+
+**Types del Dominio** (`domain/aggregates/{entidad}/{entidad}.types.ts`):
+
+- Interfaces para métodos del dominio (Props, Data para reconstrucción)
+- Usados SOLO dentro del dominio
+- Tipos estrictos con enums del dominio
+- Ejemplo: `ReservarInventarioProps` usa `TipoOperacionEnum`
+
+**DTOs de Aplicación** (`application/dto/{operacion}.dto.ts`):
+
+- Contratos de entrada/salida HTTP/GraphQL
+- Tipos primitivos (strings, numbers)
+- Se mapean a Types del dominio en la capa de aplicación
+- Ejemplo: `ReservarInventarioRequestDto` usa `string` para tipo de operación
+
+```typescript
+// domain/aggregates/inventario/inventario.types.ts
+export interface ReservarInventarioProps {
+  tipoOperacion: TipoOperacionEnum; // ← Enum del dominio
+}
+
+// application/dto/reservar-inventario-request.dto.ts
+export class ReservarInventarioRequestDto {
+  tipoOperacion: string; // ← String primitivo desde HTTP
+}
+```
+
 ### Nomenclatura de Entidades de Base de Datos
 
 - **Tablas**: snake_case (ej: `linea_venta`, `movimiento_inventario`)
 - **Campos**: snake_case (ej: `numero_documento`, `fecha_creacion`)
 - **Enums**: UPPER_SNAKE_CASE (ej: `ACTIVO`, `CON_CUENTA`)
-- **IDs**: Siempre UUID v4
+- **IDs**: Siempre UUID v7 (ver [Guía UUID v7](docs/patrones/UUID_V7_GUIDE.md))
+
+### Generación de IDs (UUID v7)
+
+Este proyecto utiliza **UUID v7** (RFC 9562) en lugar de UUID v4 para todos los identificadores.
+
+**Razón**: UUID v7 está ordenado temporalmente, lo que reduce fragmentación en índices PostgreSQL y mejora el rendimiento de escritura un 28% en comparación con UUID v4.
+
+**Cómo generar IDs**:
+
+```typescript
+// Opción 1: Factory simple (recomendado para la mayoría de casos)
+import { IdGenerator } from '@shared/domain/factories';
+const id = IdGenerator.generate(); // string
+
+// Opción 2: Value Object completo (para dominio rico)
+import { UUID } from '@shared/domain/value-objects';
+const uuid = UUID.generate(); // objeto inmutable
+const id = uuid.toString();
+```
+
+**Para crear agregados**, usar Factories:
+
+```typescript
+import { InventarioFactory } from '@inventario/domain/factories';
+
+const inventario = InventarioFactory.crear({
+  tipoItem: 'PRODUCTO',
+  itemId: productoId,
+});
+// El ID se genera automáticamente como UUID v7
+```
+
+**NUNCA usar**:
+
+- ❌ `crypto.randomUUID()` (genera UUID v4)
+- ❌ `Math.random()` (no es UUID)
+- ❌ Métodos `.crear()` estáticos en entidades (usar Factories)
+
+**Documentación completa**: [UUID v7 Guide](docs/patrones/UUID_V7_GUIDE.md)
 
 ### Estados y Enums
 
@@ -488,7 +555,7 @@ El ORM debe soportar:
 
 ### 1. **Entender la Arquitectura Hexagonal**
 
-**LEER PRIMERO**: `ARQUITECTURA_HEXAGONAL.md`  
+**LEER PRIMERO**: `docs/arquitectura/ARQUITECTURA_HEXAGONAL.md`  
 Este documento explica:
 
 - Estructura de cada módulo (domain, application, infrastructure)
@@ -578,7 +645,7 @@ npx prisma generate
 
 ## Referencias Internas
 
-- **Diseño de Persistencia Completo**: `diseno_persistencia_backend_v2.md`
+- **Diseño de Persistencia Completo**: `docs/persistencia/diseno_persistencia_backend_v2.md`
 - **Diagrama de Base de Datos**: `tienda_retail_dbdiagram_v2.md`
 
 ---

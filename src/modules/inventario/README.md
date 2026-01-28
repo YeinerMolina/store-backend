@@ -23,6 +23,7 @@ infrastructure/   → Implementaciones concretas (Prisma, HTTP, etc.)
 ## 📦 Puertos Implementados
 
 ### Inbound (Casos de Uso)
+
 - `reservarInventario()` - Reservar stock para venta/cambio
 - `consolidarReserva()` - Consolidar venta exitosa
 - `liberarReservasExpiradas()` - Job automático (cada minuto)
@@ -32,12 +33,91 @@ infrastructure/   → Implementaciones concretas (Prisma, HTTP, etc.)
 - `detectarStockBajo()` - Job diario (8 AM)
 
 ### Outbound (Adapters)
-- `InventarioRepository` → PostgreSQL
-- `ReservaRepository` → PostgreSQL
-- `MovimientoInventarioRepository` → PostgreSQL
+
+- `InventarioRepository` → PostgreSQL (persiste agregado completo)
 - `EventBusPort` → Console (TODO: Redis)
 - `ProductoPort` → TODO: CATALOGO
 - `EmpleadoPort` → TODO: IDENTIDAD
+
+## ⚡ Decisión Arquitectónica: Un Repository por Agregado
+
+**IMPORTANTE**: Este módulo implementa DDD correctamente con **UN SOLO repository**
+para todo el agregado `Inventario`, que incluye sus entidades internas:
+
+- `Reserva`
+- `MovimientoInventario`
+
+### ¿Por qué un solo repository?
+
+Un agregado existe para **garantizar invariantes de consistencia**. Si permitimos
+que las entidades internas (`Reserva`, `MovimientoInventario`) se persistan
+independientemente, perdemos:
+
+1. ❌ **Control transaccional** - No hay atomicidad garantizada
+2. ❌ **Invariantes** - Podemos romper reglas (ej: reservar más de lo disponible)
+3. ❌ **Punto único de verdad** - El aggregate root deja de ser "root"
+4. ❌ **Trazabilidad** - Los movimientos pueden quedar huérfanos
+
+### Cómo funciona
+
+Todas las operaciones de escritura en entidades internas DEBEN pasar por el
+aggregate root `Inventario`. En vez de callbacks, usamos **parámetros declarativos**:
+
+```typescript
+// ❌ MAL - Bypass del agregado
+const reserva = new Reserva(...);
+await reservaRepository.guardar(reserva); // Viola invariantes
+
+// ✅ BIEN - A través del agregado con parámetros declarativos
+const inventario = await inventarioRepo.buscarPorId(id);
+const reserva = inventario.reservar(props); // Valida reglas
+await inventarioRepo.guardar(inventario, {
+  reservas: { nuevas: [reserva] }  // Se persiste en la misma transacción
+});
+```
+
+**Ventajas de este patrón**:
+
+- ✅ Más declarativo (defines QUÉ persistir, no CÓMO)
+- ✅ Más testeable (no hay callbacks que mockear)
+- ✅ Type-safe (el compilador valida la estructura)
+- ✅ Más legible (menos nesting)
+- ✅ Transaccional (todo se guarda atómicamente)
+
+### Ejemplos de Uso
+
+```typescript
+// Reservar inventario
+const reserva = inventario.reservar(props);
+await inventarioRepo.guardar(inventario, {
+  reservas: { nuevas: [reserva] },
+});
+
+// Consolidar reserva (actualizar + crear movimiento)
+reserva.consolidar();
+const movimiento = inventario.consolidarReserva(reserva);
+await inventarioRepo.guardar(inventario, {
+  reservas: { actualizadas: [reserva] },
+  movimientos: [movimiento],
+});
+
+// Ajuste manual (solo movimiento)
+const movimiento = inventario.ajustar(props);
+await inventarioRepo.guardar(inventario, {
+  movimientos: [movimiento],
+});
+```
+
+El `InventarioRepository` consolida:
+
+- Escritura del aggregate root (con optimistic locking)
+- Persistencia de entidades internas (dentro de la misma transacción)
+- Queries de lectura (para todas las entidades)
+
+### Referencias
+
+- `docs/arquitectura/ARQUITECTURA_HEXAGONAL.md` - Principios DDD
+- `domain/ports/outbound/inventario.repository.ts` - Interfaz completa
 
 ## 🔌 Endpoints HTTP
 
@@ -82,16 +162,19 @@ WHERE id = ? AND version = ?
 ## 🚀 Primeros Pasos
 
 ### 1. Instalar Dependencias
+
 ```bash
 npm install @nestjs/schedule @nestjs/swagger swagger-ui-express
 ```
 
 ### 2. Ejecutar Migración
+
 ```bash
 npm run db:migrate:dev
 ```
 
 ### 3. Registrar en AppModule
+
 ```typescript
 import { InventarioModule } from './modules/inventario/infrastructure/inventario.module';
 
@@ -102,6 +185,7 @@ export class AppModule {}
 ```
 
 ### 4. Iniciar
+
 ```bash
 npm run start:dev
 ```
@@ -142,7 +226,7 @@ curl http://localhost:3000/inventario/disponibilidad?tipoItem=PRODUCTO&itemId=12
 ✅ Optimistic locking sin deadlocks  
 ✅ Repositorios inyectables  
 ✅ Separación de responsabilidades  
-✅ Listo para escalar  
+✅ Listo para escalar
 
 ## 📝 TODOs
 

@@ -59,14 +59,14 @@ Visualizaciones de la arquitectura del proyecto.
         ║                      │                            ║
         ║                      ↓                            ║
         ║          ┌─────────────────────────┐             ║
-        ║          │   PUERTOS OUTBOUND      │             ║
-        ║          │    (Interfaces)         │             ║
-        ║          │                         │             ║
-        ║          │  IVentaRepository       │             ║
-        ║          │  IInventarioPort        │             ║
-        ║          │  ICatalogoPort          │             ║
-        ║          │  IEventBusPort          │             ║
-        ║          └───────────┬─────────────┘             ║
+         ║          │   PUERTOS OUTBOUND      │             ║
+         ║          │    (Interfaces)         │             ║
+         ║          │                         │             ║
+         ║          │  VentaRepository        │             ║
+         ║          │  InventarioPort         │             ║
+         ║          │  CatalogoPort           │             ║
+         ║          │  EventBusPort           │             ║
+         ║          └───────────┬─────────────┘             ║
         ║                      │                            ║
         ╚══════════════════════╧════════════════════════════╝
                                │
@@ -124,7 +124,7 @@ Visualizaciones de la arquitectura del proyecto.
 │            ├───────────────────────────────┐                   │
 │            │                               ↓                   │
 │            │                     ┌──────────────────┐          │
-│            │                     │ IInventarioPort  │          │
+│            │                     │ InventarioPort   │          │
 │            │                     └────────┬─────────┘          │
 │            │                              │                    │
 │            │ ←────────────────────────────┘                    │
@@ -134,7 +134,7 @@ Visualizaciones de la arquitectura del proyecto.
 │            ├───────────────────────────────┐                   │
 │            │                               ↓                   │
 │            │                     ┌──────────────────┐          │
-│            │                     │  ICatalogoPort   │          │
+│            │                     │  CatalogoPort    │          │
 │            │                     └────────┬─────────┘          │
 │            │                              │                    │
 │            │ ←────────────────────────────┘                    │
@@ -171,7 +171,7 @@ Visualizaciones de la arquitectura del proyecto.
 │            ├───────────────────────────────┐                   │
 │            │                               ↓                   │
 │            │                     ┌──────────────────┐          │
-│            │                     │IVentaRepository  │          │
+│            │                     │VentaRepository   │          │
 │            │                     └────────┬─────────┘          │
 │            │                              │                    │
 │            │ ←────────────────────────────┘                    │
@@ -181,7 +181,7 @@ Visualizaciones de la arquitectura del proyecto.
 │            ├───────────────────────────────┐                   │
 │            │                               ↓                   │
 │            │                     ┌──────────────────┐          │
-│            │                     │  IEventBusPort   │          │
+│            │                     │  EventBusPort    │          │
 │            │                     └────────┬─────────┘          │
 │            │                              │                    │
 │            │ ←────────────────────────────┘                    │
@@ -279,28 +279,28 @@ Visualizaciones de la arquitectura del proyecto.
     │  PUERTOS INBOUND → IMPLEMENTACIONES     │
     └─────────────────────────────────────────┘
     {
-      provide: 'IVentaService',    ← Interfaz (puerto)
-      useClass: VentaService        ← Implementación
+      provide: VENTA_SERVICE_TOKEN,    ← Token (Symbol)
+      useClass: VentaApplicationService ← Implementación
     }
 
     ┌─────────────────────────────────────────┐
     │  PUERTOS OUTBOUND → IMPLEMENTACIONES    │
     └─────────────────────────────────────────┘
     {
-      provide: 'IVentaRepository',
-      useClass: PrismaVentaRepository  ← Adaptador BD
+      provide: VENTA_REPOSITORY_TOKEN,
+      useClass: VentaPostgresRepository  ← Adaptador BD
     },
     {
-      provide: 'IInventarioPort',
-      useClass: InventarioAdapter      ← Adaptador a otro módulo
+      provide: INVENTARIO_PORT_TOKEN,
+      useClass: InventarioHttpAdapter    ← Adaptador a otro módulo
     },
     {
-      provide: 'ICatalogoPort',
-      useClass: CatalogoAdapter
+      provide: CATALOGO_PORT_TOKEN,
+      useClass: CatalogoHttpAdapter
     },
     {
-      provide: 'IEventBusPort',
-      useClass: EventBusAdapter        ← Adaptador a Redis/RabbitMQ
+      provide: EVENT_BUS_PORT_TOKEN,
+      useClass: EventBusRedisAdapter     ← Adaptador a Redis/RabbitMQ
     }
   ]
 })
@@ -311,13 +311,13 @@ Visualizaciones de la arquitectura del proyecto.
 
 Hoy:
 {
-  provide: 'IInventarioPort',
+  provide: INVENTARIO_PORT_TOKEN,
   useClass: InventarioHttpAdapter  // Llama por HTTP
 }
 
 Mañana:
 {
-  provide: 'IInventarioPort',
+  provide: INVENTARIO_PORT_TOKEN,
   useClass: InventarioEventAdapter // Publica eventos
 }
 
@@ -363,9 +363,9 @@ SIN MOCKS ✅ (no hay dependencias externas)
 │              INTEGRATION TESTS (APPLICATION)                │
 └─────────────────────────────────────────────────────────────┘
 
-describe('VentaService', () => {
-  let mockRepo: IVentaRepository;      ← Mock de puerto
-  let mockInventario: IInventarioPort; ← Mock de puerto
+describe('VentaApplicationService', () => {
+  let mockRepo: VentaRepository;      ← Mock de puerto
+  let mockInventario: InventarioPort; ← Mock de puerto
 
   beforeEach(() => {
     mockRepo = { save: jest.fn() };
@@ -373,7 +373,7 @@ describe('VentaService', () => {
   });
 
   it('debe crear venta', async () => {
-    const service = new VentaService(mockRepo, mockInventario, ...);
+    const service = new VentaApplicationService(mockRepo, mockInventario, ...);
 
     await service.crearDesdeCarrito(...);
 

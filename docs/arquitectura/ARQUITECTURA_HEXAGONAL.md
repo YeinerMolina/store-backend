@@ -154,22 +154,22 @@ class VentaService {
 
 ```typescript
 // ✅ BIEN: Dominio define interfaz (puerto)
-// domain/ports/outbound/i-venta-repository.port.ts
-export interface IVentaRepository {
+// domain/ports/outbound/venta.repository.ts
+export interface VentaRepository {
   save(venta: Venta): Promise<void>;
 }
 
-// application/services/venta.service.ts
-class VentaService {
-  constructor(private repo: IVentaRepository) {} // Depende de interfaz
+// application/services/venta-application.service.ts
+class VentaApplicationService {
+  constructor(private repo: VentaRepository) {} // Depende de interfaz
 
   async crear() {
     await this.repo.save(venta); // No conoce la implementación
   }
 }
 
-// infrastructure/persistence/prisma-venta.repository.ts
-class PrismaVentaRepository implements IVentaRepository {
+// infrastructure/persistence/venta-postgres.repository.ts
+class VentaPostgresRepository implements VentaRepository {
   constructor(private prisma: PrismaClient) {}
 
   async save(venta: Venta) {
@@ -186,30 +186,202 @@ class PrismaVentaRepository implements IVentaRepository {
                     └────────┬────────┘
                              │ usa
                              ↓
-                    ┌─────────────────┐
-   INBOUND ─────────│  IVentaService  │ (Puerto de Entrada)
-                    └────────┬────────┘
-                             │ implementa
-                             ↓
-                    ┌─────────────────┐
-                    │  VentaService   │ (Application Service)
-                    └────────┬────────┘
-                             │ usa
-                             ↓
-            ┌────────────────────────────────┐
-            │                                │
-            ↓                                ↓
+                     ┌─────────────────┐
+   INBOUND ─────────│  VentaService   │ (Puerto de Entrada)
+                     └────────┬────────┘
+                              │ implementa
+                              ↓
+                     ┌───────────────────────────┐
+                     │  VentaApplicationService  │ (Application Service)
+                     └────────┬──────────────────┘
+                              │ usa
+                              ↓
+             ┌────────────────────────────────┐
+             │                                │
+             ↓                                ↓
    ┌─────────────────┐          ┌─────────────────────┐
-   │IVentaRepository │          │  IInventarioPort    │ (Puertos de Salida)
+   │VentaRepository  │          │  InventarioPort     │ (Puertos de Salida)
    └────────┬────────┘          └──────────┬──────────┘
             │ implementa                   │ implementa
             ↓                              ↓
-   ┌─────────────────┐          ┌─────────────────────┐
-OUTBOUND │PrismaVentaRepo│          │ InventarioAdapter   │ (Adaptadores Secundarios)
-   └─────────────────┘          └─────────────────────┘
+   ┌───────────────────────┐  ┌─────────────────────┐
+OUTBOUND │VentaPostgresRepository│  │ InventarioHttpAdapter│ (Adaptadores Secundarios)
+   └───────────────────────┘  └─────────────────────┘
 ```
 
-## 📦 Agregados DDD en Hexagonal
+## 📦 Agregados DDD y Repositorios
+
+### Principio Fundamental: Un Agregado = Un Repository
+
+**REGLA CRÍTICA**: Cada agregado tiene EXACTAMENTE un repository. Las entidades internas del agregado NO tienen repositories propios.
+
+```typescript
+// ✅ CORRECTO: Un repository por agregado
+export interface InventarioRepository {
+  guardar(inventario: Inventario, options?: GuardarOptions): Promise<void>;
+  buscarPorId(id: string): Promise<Inventario | null>;
+
+  // Queries de entidades internas (solo lectura)
+  buscarReservasActivas(operacionId: string): Promise<Reserva[]>;
+  buscarMovimientos(inventarioId: string): Promise<MovimientoInventario[]>;
+}
+
+// ❌ INCORRECTO: Repositories separados para entidades internas
+export interface ReservaRepository { ... }  // ❌ Viola DDD
+export interface MovimientoRepository { ... }  // ❌ Viola DDD
+```
+
+### ¿Por qué es un error tener múltiples repositories?
+
+Cuando permitís que las entidades internas se persistan independientemente:
+
+1. ❌ **Pierdes control transaccional** - No hay atomicidad garantizada
+2. ❌ **Rompes invariantes** - Podés reservar más de lo disponible
+3. ❌ **Pierdes el "root"** - El aggregate root deja de ser punto de entrada
+4. ❌ **Rompes trazabilidad** - Los movimientos pueden quedar huérfanos
+
+### API Declarativa para Entidades Internas
+
+En vez de callbacks, usamos **opciones declarativas** que especifican qué entidades internas persistir:
+
+```typescript
+// ✅ BIEN: API Declarativa
+export interface GuardarInventarioOptions {
+  reservas?: {
+    nuevas?: Reserva[]; // Reservas recién creadas por el agregado
+    actualizadas?: Reserva[]; // Reservas existentes modificadas
+  };
+  movimientos?: MovimientoInventario[]; // Siempre nuevos (append-only)
+}
+
+// Uso claro y expresivo
+const reserva = inventario.reservar(props);
+await repo.guardar(inventario, {
+  reservas: { nuevas: [reserva] }, // Intención clara: es una CREACIÓN
+});
+
+// ❌ MAL: Callbacks (patrón viejo)
+await repo.guardarConTransaction(inventario, async () => {
+  await repo.guardarReserva(reserva); // Menos expresivo, más complejo
+});
+```
+
+**Ventajas de la API declarativa**:
+
+- ✅ Más expresiva (defines QUÉ persistir, no CÓMO)
+- ✅ Type-safe (el compilador valida la estructura)
+- ✅ Más testeable (sin callbacks que mockear)
+- ✅ Más legible (menos nesting)
+
+### Ejemplo Real: Agregado Inventario
+
+El agregado `Inventario` tiene entidades internas `Reserva` y `MovimientoInventario`:
+
+```typescript
+// domain/aggregates/inventario/inventario.entity.ts
+export class Inventario {
+  // Métodos que CREAN entidades internas
+  reservar(props): Reserva {
+    // Valida invariantes (stock disponible, etc.)
+    const reserva = ReservaFactory.crear(...);
+    this.cantidadReservada += reserva.cantidad;
+    return reserva;  // El agregado la creó
+  }
+
+  consolidarReserva(reserva: Reserva): MovimientoInventario {
+    // Valida invariantes y crea movimiento
+    const movimiento = MovimientoInventarioFactory.crear(...);
+    return movimiento;
+  }
+}
+
+// application/services/inventario.service.ts
+async reservarInventario(request) {
+  const inventario = await this.repo.buscarPorItem(...);
+
+  // El agregado crea la reserva (valida invariantes)
+  const reserva = inventario.reservar(props);
+
+  // Persistimos TODO junto (atómico)
+  await this.repo.guardar(inventario, {
+    reservas: { nuevas: [reserva] }
+  });
+}
+
+async consolidarReserva(request) {
+  // Cargamos reserva existente de BD
+  const reservas = await this.repo.buscarReservasActivas(operacionId);
+
+  for (const reserva of reservas) {
+    const inventario = await this.repo.buscarPorId(reserva.inventarioId);
+
+    // Modificamos reserva existente
+    reserva.consolidar();
+    const movimiento = inventario.consolidarReserva(reserva);
+
+    // Persistimos TODO junto (atómico)
+    await this.repo.guardar(inventario, {
+      reservas: { actualizadas: [reserva] },
+      movimientos: [movimiento]
+    });
+  }
+}
+```
+
+### Implementación del Repository (Prisma)
+
+```typescript
+// infrastructure/persistence/inventario-postgres.repository.ts
+export class InventarioPostgresRepository implements InventarioRepository {
+  async guardar(
+    inventario: Inventario,
+    options?: GuardarInventarioOptions
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Guardar aggregate root (con optimistic locking)
+      const versionAnterior = inventario.version - 1;
+      const resultado = await tx.inventario.updateMany({
+        where: { id: inventario.id, version: versionAnterior },
+        data: { ...inventarioData }
+      });
+
+      if (resultado.count === 0) {
+        throw new OptimisticLockingError('Inventario', inventario.id);
+      }
+
+      // 2. Persistir entidades internas (si se especificaron)
+      if (options?.reservas?.nuevas) {
+        for (const reserva of options.reservas.nuevas) {
+          await tx.reserva.create({ data: { ...reservaData } });
+        }
+      }
+
+      if (options?.reservas?.actualizadas) {
+        for (const reserva of options.reservas.actualizadas) {
+          await tx.reserva.update({
+            where: { id: reserva.id },
+            data: { estado: reserva.estado, ... }
+          });
+        }
+      }
+
+      if (options?.movimientos) {
+        for (const mov of options.movimientos) {
+          await tx.movimientoInventario.create({ data: { ...movData } });
+        }
+      }
+    });
+  }
+
+  // Queries de lectura (sin restricciones)
+  async buscarReservasActivas(operacionId: string): Promise<Reserva[]> {
+    const datos = await this.prisma.reserva.findMany({
+      where: { operacionId, estado: 'ACTIVA' }
+    });
+    return datos.map(d => Reserva.desde(d));
+  }
+}
+```
 
 ### Definición de Agregado
 
@@ -293,38 +465,234 @@ class Venta {
 venta.estado = EstadoVenta.CONFIRMADA; // ❌ Saltea lógica de negocio
 ```
 
+## 🏷️ Convenciones de Nombres (Puertos y Adaptadores)
+
+### NO Usar Prefijo "I" en Interfaces
+
+A diferencia de lenguajes como C# o Java, en TypeScript/JavaScript **NO usamos prefijo "I"** para interfaces.
+
+```typescript
+// ❌ MAL: Prefijo "I" (convención antigua de C#/Java)
+export interface IVentaRepository { ... }
+export interface IVentaService { ... }
+export interface IInventarioPort { ... }
+
+// ✅ BIEN: Nombres descriptivos sin prefijo
+export interface VentaRepository { ... }
+export interface VentaService { ... }
+export interface InventarioPort { ... }
+```
+
+**Razón**: Las interfaces representan contratos de dominio, no son "tipos técnicos". El nombre debe describir el concepto, no el mecanismo de implementación.
+
+### Sufijos para Adaptadores (Implementaciones)
+
+Los adaptadores (implementaciones concretas) usan sufijos técnicos que indican la tecnología o protocolo:
+
+```typescript
+// Puerto (interfaz de dominio)
+export interface InventarioRepository {
+  guardar(inventario: Inventario): Promise<void>;
+}
+
+// Adaptadores (implementaciones concretas)
+export class InventarioPostgresRepository implements InventarioRepository { ... }
+export class InventarioMongoRepository implements InventarioRepository { ... }
+export class InventarioInMemoryRepository implements InventarioRepository { ... }
+
+// Otro ejemplo: Puertos de comunicación entre módulos
+export interface InventarioPort {
+  verificarDisponibilidad(props): Promise<boolean>;
+}
+
+export class InventarioHttpAdapter implements InventarioPort { ... }
+export class InventarioEventAdapter implements InventarioPort { ... }
+export class InventarioGrpcAdapter implements InventarioPort { ... }
+```
+
+### Application Services
+
+Los servicios de aplicación añaden sufijo `ApplicationService` para diferenciar de la interfaz:
+
+```typescript
+// Puerto inbound (interfaz)
+export interface VentaService {
+  crearDesdeCarrito(carritoId: string): Promise<VentaResponseDto>;
+}
+
+// Implementación
+export class VentaApplicationService implements VentaService { ... }
+```
+
+### Resumen de Convenciones
+
+| Tipo                     | Convención                                | Ejemplo                             |
+| ------------------------ | ----------------------------------------- | ----------------------------------- |
+| **Puerto Inbound**       | `{Concepto}Service`                       | `VentaService`                      |
+| **Puerto Outbound**      | `{Concepto}Repository` o `{Concepto}Port` | `VentaRepository`, `InventarioPort` |
+| **Adaptador Repository** | `{Concepto}{Tecnología}Repository`        | `VentaPostgresRepository`           |
+| **Adaptador Port**       | `{Concepto}{Protocolo}Adapter`            | `InventarioHttpAdapter`             |
+| **Application Service**  | `{Concepto}ApplicationService`            | `VentaApplicationService`           |
+| **Agregado**             | `{Concepto}`                              | `Venta`, `Inventario`               |
+| **Value Object**         | `{Concepto}`                              | `Money`, `UUID`, `Email`            |
+
+## 📝 Documentación de Código
+
+### Principio: Documentar el WHY, No el WHAT
+
+Seguimos la filosofía de que **el código es auto-documentario para el WHAT**. Los comentarios existen para explicar lo que el código no puede expresar:
+
+1. **WHY** se tomó una decisión de diseño
+2. **SIDE EFFECTS** no obvios
+3. **NON-OBVIOUS BEHAVIOR** o edge cases
+4. **BUSINESS LOGIC** que requiere contexto del dominio
+
+### Formato JSDoc para TypeScript
+
+```typescript
+/**
+ * Uses version-based optimistic locking to prevent lost updates
+ * when multiple processes modify the same inventory simultaneously.
+ *
+ * All operations execute atomically within a single transaction;
+ * if any fails, everything rolls back to prevent partial state.
+ *
+ * @throws {OptimisticLockingError} When version mismatch detected
+ */
+async guardar(
+  inventario: Inventario,
+  options?: GuardarInventarioOptions
+): Promise<void>;
+```
+
+### Qué NO Documentar
+
+```typescript
+// ❌ MAL: Documenta el WHAT (obvio por el nombre)
+/**
+ * Gets a user by ID
+ */
+getUser(id: string): Promise<User>
+
+/**
+ * The user's email
+ */
+email: string;
+
+/**
+ * Saves the inventory
+ */
+guardar(inventario: Inventario): Promise<void>;
+
+// ✅ BIEN: Sin comentario (auto-descriptivo)
+getUser(id: string): Promise<User>
+email: string;
+guardar(inventario: Inventario): Promise<void>;
+```
+
+### Qué SÍ Documentar
+
+```typescript
+// ✅ BIEN: Documenta el WHY técnico
+/**
+ * Queries only ACTIVA state to avoid re-processing reservations
+ * already handled by previous job executions.
+ */
+buscarReservasExpiradas(): Promise<Reserva[]>;
+
+// ✅ BIEN: Documenta decisión de diseño
+/**
+ * Enforces DDD principle: one aggregate = one repository.
+ * Internal entities must NOT be persisted outside this repository.
+ */
+export interface InventarioRepository { ... }
+
+// ✅ BIEN: Documenta side effect crítico
+/**
+ * Uses MD5 because legacy clients expect it.
+ * TODO: Migrate to SHA-256 after v2.0.
+ */
+hashPassword(password: string): string
+```
+
+### Limpieza de Comentarios Redundantes
+
+Cuando revises código, **elimina comentarios que se pueden borrar sin perder claridad**:
+
+```typescript
+// ANTES (redundante)
+/** User service class */
+class UserService {
+  /** The user repository */
+  private repo: UserRepository;
+
+  /** Gets a user by ID */
+  async getUser(id: string): Promise<User> {
+    // Find the user
+    return this.repo.findById(id);
+  }
+}
+
+// DESPUÉS (limpio)
+class UserService {
+  private repo: UserRepository;
+
+  async getUser(id: string): Promise<User> {
+    return this.repo.findById(id);
+  }
+}
+```
+
+### Regla de Oro
+
+> **Si lo puedo borrar y el código sigue siendo claro → BORRARLO**
+
 ## 🔌 Inyección de Dependencias con NestJS
 
 ### Configuración del Módulo
 
 ```typescript
 // {modulo}.module.ts
+import {
+  VENTA_SERVICE_TOKEN,
+  VENTA_REPOSITORY_TOKEN,
+} from './domain/ports/tokens';
+
 @Module({
   controllers: [VentaController],
   providers: [
     // Puertos Inbound → Implementaciones
     {
-      provide: 'IVentaService',
-      useClass: VentaService,
+      provide: VENTA_SERVICE_TOKEN,
+      useClass: VentaApplicationService,
     },
 
     // Puertos Outbound → Implementaciones
     {
-      provide: 'IVentaRepository',
-      useClass: PrismaVentaRepository,
+      provide: VENTA_REPOSITORY_TOKEN,
+      useClass: VentaPostgresRepository,
     },
     {
-      provide: 'IInventarioPort',
-      useClass: InventarioAdapter, // ← Cambiable
+      provide: INVENTARIO_PORT_TOKEN,
+      useClass: InventarioHttpAdapter, // ← Cambiable
     },
     {
-      provide: 'ICatalogoPort',
-      useClass: CatalogoAdapter,
+      provide: CATALOGO_PORT_TOKEN,
+      useClass: CatalogoHttpAdapter,
     },
   ],
-  exports: ['IVentaService'], // Exportar para otros módulos
+  exports: [VENTA_SERVICE_TOKEN], // Exportar para otros módulos
 })
 export class ComercialModule {}
+```
+
+**Nota**: Usamos Symbols como tokens en vez de strings para type-safety:
+
+```typescript
+// domain/ports/tokens.ts
+export const VENTA_SERVICE_TOKEN = Symbol('VENTA_SERVICE');
+export const VENTA_REPOSITORY_TOKEN = Symbol('VENTA_REPOSITORY');
+export const INVENTARIO_PORT_TOKEN = Symbol('INVENTARIO_PORT');
 ```
 
 ### Cambiar Implementación SIN Tocar Dominio
@@ -332,13 +700,13 @@ export class ComercialModule {}
 ```typescript
 // Hoy: Comunicación HTTP
 {
-  provide: 'IInventarioPort',
+  provide: INVENTARIO_PORT_TOKEN,
   useClass: InventarioHttpAdapter,
 }
 
 // Mañana: Comunicación por Eventos
 {
-  provide: 'IInventarioPort',
+  provide: INVENTARIO_PORT_TOKEN,
   useClass: InventarioEventAdapter, // ← Solo cambiamos esto
 }
 
@@ -498,10 +866,10 @@ describe('Venta Aggregate', () => {
 ### Integration Tests (Application - CON Mocks de Puertos)
 
 ```typescript
-describe('VentaService', () => {
-  let service: VentaService;
-  let mockRepo: jest.Mocked<IVentaRepository>;
-  let mockInventario: jest.Mocked<IInventarioPort>;
+describe('VentaApplicationService', () => {
+  let service: VentaApplicationService;
+  let mockRepo: jest.Mocked<VentaRepository>;
+  let mockInventario: jest.Mocked<InventarioPort>;
 
   beforeEach(() => {
     mockRepo = {
@@ -514,7 +882,7 @@ describe('VentaService', () => {
       reservar: jest.fn().mockResolvedValue(UUID.create()),
     } as any;
 
-    service = new VentaService(mockRepo, mockInventario, ...);
+    service = new VentaApplicationService(mockRepo, mockInventario, ...);
   });
 
   it('debe crear venta desde carrito', async () => {

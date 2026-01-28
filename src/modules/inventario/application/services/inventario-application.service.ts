@@ -1,11 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { EntidadNoEncontradaError } from '../../domain/exceptions';
 import type { InventarioRepository } from '../../domain/ports/outbound/inventario.repository';
-import type { ReservaRepository } from '../../domain/ports/outbound/reserva.repository';
-import type { MovimientoInventarioRepository } from '../../domain/ports/outbound/movimiento-inventario.repository';
 import type { EventBusPort } from '../../domain/ports/outbound/event-bus.port';
-import { Inventario } from '../../domain/aggregates/inventario/inventario.entity';
-import { Reserva } from '../../domain/aggregates/inventario/reserva.entity';
 import {
   TipoActorEnum,
   TipoItemEnum,
@@ -32,8 +28,6 @@ export class InventarioApplicationService implements InventarioService {
 
   constructor(
     private readonly inventarioRepo: InventarioRepository,
-    private readonly reservaRepo: ReservaRepository,
-    private readonly movimientoRepo: MovimientoInventarioRepository,
     private readonly eventBus: EventBusPort,
   ) {}
 
@@ -67,8 +61,8 @@ export class InventarioApplicationService implements InventarioService {
       minutosExpiracion: duracionMinutos,
     });
 
-    await this.inventarioRepo.guardarConTransaction(inventario, async () => {
-      await this.reservaRepo.guardar(reserva);
+    await this.inventarioRepo.guardar(inventario, {
+      reservas: { nuevas: [reserva] },
     });
 
     for (const evento of inventario.domainEvents) {
@@ -80,7 +74,7 @@ export class InventarioApplicationService implements InventarioService {
   }
 
   async consolidarReserva(request: ConsolidarReservaRequestDto): Promise<void> {
-    const reservas = await this.reservaRepo.buscarActivasPorOperacion(
+    const reservas = await this.inventarioRepo.buscarReservasActivas(
       request.operacionId,
     );
 
@@ -88,31 +82,32 @@ export class InventarioApplicationService implements InventarioService {
       throw new EntidadNoEncontradaError('Reserva', request.operacionId);
     }
 
-    const reserva = reservas[0];
+    for (const reserva of reservas) {
+      const inventario = await this.inventarioRepo.buscarPorId(
+        reserva.inventarioId,
+      );
+      if (!inventario) {
+        throw new EntidadNoEncontradaError('Inventario', reserva.inventarioId);
+      }
 
-    const inventario = await this.inventarioRepo.buscarPorId(
-      reserva.inventarioId,
-    );
-    if (!inventario) {
-      throw new EntidadNoEncontradaError('Inventario', reserva.inventarioId);
+      reserva.consolidar();
+      const movimiento = inventario.consolidarReserva(reserva);
+
+      await this.inventarioRepo.guardar(inventario, {
+        reservas: { actualizadas: [reserva] },
+        movimientos: [movimiento],
+      });
+
+      for (const evento of inventario.domainEvents) {
+        await this.eventBus.publicar(evento);
+      }
+      inventario.clearDomainEvents();
     }
-
-    reserva.consolidar();
-    const movimiento = inventario.consolidarReserva(reserva);
-
-    await this.inventarioRepo.guardarConTransaction(inventario, async () => {
-      await this.reservaRepo.actualizar(reserva);
-      await this.movimientoRepo.guardar(movimiento);
-    });
-
-    for (const evento of inventario.domainEvents) {
-      await this.eventBus.publicar(evento);
-    }
-    inventario.clearDomainEvents();
   }
 
   async liberarReservasExpiradas(): Promise<void> {
-    const reservasExpiradas = await this.reservaRepo.buscarExpiradas();
+    const reservasExpiradas =
+      await this.inventarioRepo.buscarReservasExpiradas();
 
     for (const reserva of reservasExpiradas) {
       const inventario = await this.inventarioRepo.buscarPorId(
@@ -126,9 +121,9 @@ export class InventarioApplicationService implements InventarioService {
       reserva.expirar();
       const movimiento = inventario.liberarReserva(reserva);
 
-      await this.inventarioRepo.guardarConTransaction(inventario, async () => {
-        await this.reservaRepo.actualizar(reserva);
-        await this.movimientoRepo.guardar(movimiento);
+      await this.inventarioRepo.guardar(inventario, {
+        reservas: { actualizadas: [reserva] },
+        movimientos: [movimiento],
       });
 
       for (const evento of inventario.domainEvents) {
@@ -154,8 +149,8 @@ export class InventarioApplicationService implements InventarioService {
       notas: request.notas,
     });
 
-    await this.inventarioRepo.guardarConTransaction(inventario, async () => {
-      await this.movimientoRepo.guardar(movimiento);
+    await this.inventarioRepo.guardar(inventario, {
+      movimientos: [movimiento],
     });
 
     for (const evento of inventario.domainEvents) {

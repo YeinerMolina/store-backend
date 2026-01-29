@@ -35,10 +35,8 @@ export class InventarioPostgresRepository implements InventarioRepository {
     options?: GuardarInventarioOptions,
   ): Promise<void> {
     const ejecutarGuardado = async (tx: PrismaTransactionClient) => {
-      // Persist inventory first (root aggregate) before dependent entities
       await this.persistirInventario(tx, inventario);
 
-      // Order matters: new reservations before updates, then movements for audit trail
       if (options?.reservas?.nuevas) {
         await this.guardarReservasNuevas(tx, options.reservas.nuevas);
       }
@@ -122,8 +120,6 @@ export class InventarioPostgresRepository implements InventarioRepository {
       return;
     }
 
-    // Update with version check: only succeeds if version matches
-    // Excludes deleted records from optimization check (they cannot be revived here)
     const versionAnterior = data.version - 1;
     await this.actualizarInventarioConVersionCheck(
       tx,
@@ -364,7 +360,6 @@ export class InventarioPostgresRepository implements InventarioRepository {
       const data = PrismaInventarioMapper.toPersistence(inventario);
       const versionAnterior = data.version - 1;
 
-      // Use centralized version check logic with protection against re-deleting
       await this.actualizarInventarioConVersionCheck(
         tx,
         inventario.id,
@@ -374,7 +369,7 @@ export class InventarioPostgresRepository implements InventarioRepository {
           version: data.version,
           fechaActualizacion: data.fechaActualizacion,
         },
-        { deleted: false }, // ← Only delete if not already deleted
+        { deleted: false },
       );
     };
 

@@ -106,6 +106,24 @@ export type DisponibilidadResponseDto = z.infer<
   typeof DisponibilidadResponseSchema
 >;
 
+export const CrearInventarioSchema = z.object({
+  tipoItem: TipoItemSchema,
+  itemId: UUIDSchema,
+  cantidadInicial: CantidadPositivaSchema,
+  empleadoId: UUIDSchema,
+  ubicacion: z
+    .string()
+    .min(1, { message: 'Ubicación no puede estar vacía' })
+    .max(255, { message: 'Ubicación máximo 255 caracteres' })
+    .optional(),
+  notas: z
+    .string()
+    .max(1000, { message: 'Notas máximo 1000 caracteres' })
+    .optional(),
+});
+
+export type CrearInventarioDto = z.infer<typeof CrearInventarioSchema>;
+
 export const InventarioResponseSchema = z.object({
   id: UUIDSchema,
   tipoItem: TipoItemSchema,

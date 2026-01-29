@@ -14,6 +14,8 @@ import { ValidateWith } from '../../../../shared/decorators/validate-with.decora
 import type { InventarioService } from '../../domain/ports/inbound/inventario.service';
 import { INVENTARIO_SERVICE_TOKEN } from '../../domain/ports/tokens';
 import {
+  CrearInventarioSchema,
+  type CrearInventarioDto,
   ReservarInventarioSchema,
   type ReservarInventarioDto,
   ConsolidarReservaSchema,
@@ -33,6 +35,15 @@ export class InventarioController {
     @Inject(INVENTARIO_SERVICE_TOKEN)
     private readonly inventarioService: InventarioService,
   ) {}
+
+  @Post()
+  @ValidateWith(CrearInventarioSchema)
+  @HttpCode(HttpStatus.CREATED)
+  async crearInventario(
+    @Body() dto: CrearInventarioDto,
+  ): Promise<InventarioResponseDto> {
+    return await this.inventarioService.crearInventario(dto);
+  }
 
   @Post('reservar')
   @ValidateWith(ReservarInventarioSchema)

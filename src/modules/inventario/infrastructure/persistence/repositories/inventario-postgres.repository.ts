@@ -5,6 +5,8 @@ import { MovimientoInventario } from '../../../domain/aggregates/inventario/movi
 import {
   EstadoReservaEnum,
   TipoItemEnum,
+  TipoOperacionEnum,
+  TipoActorEnum,
 } from '../../../domain/aggregates/inventario/types';
 import type {
   InventarioRepository,
@@ -17,6 +19,7 @@ import { PrismaMovimientoInventarioMapper } from '../mappers/prisma-movimiento-i
 import { PrismaService } from '../../../../../shared/database/prisma.service';
 import { OptimisticLockingError } from '../../../domain/exceptions';
 import type { PrismaTransactionClient } from '../types/prisma-transaction.type';
+import type { Reserva as PrismaReserva } from '@prisma/client';
 
 @Injectable()
 export class InventarioPostgresRepository implements InventarioRepository {
@@ -49,11 +52,53 @@ export class InventarioPostgresRepository implements InventarioRepository {
       }
     };
 
-    const ctx = options?.transactionContext;
+    await this.ejecutarConTransaccion(
+      ejecutarGuardado,
+      options?.transactionContext,
+    );
+  }
+
+  /**
+   * Executes a function within a database transaction.
+   * Reuses external transaction if provided, otherwise creates new one.
+   * Ensures ACID properties for complex multi-table operations.
+   */
+  private async ejecutarConTransaccion(
+    fn: (tx: PrismaTransactionClient) => Promise<void>,
+    ctx?: TransactionContext,
+  ): Promise<void> {
     if (ctx) {
-      await ejecutarGuardado(ctx);
+      await fn(ctx);
     } else {
-      await this.prismaService.prisma.$transaction(ejecutarGuardado);
+      await this.prismaService.prisma.$transaction(fn);
+    }
+  }
+
+  /**
+   * Updates an inventory record with optimistic locking (version check).
+   * Only succeeds if version matches expected previous version.
+   * Prevents concurrent modification conflicts.
+   * Supports additional WHERE filters (e.g., deleted=false for soft-delete protection).
+   * @throws OptimisticLockingError if version mismatch or record doesn't exist
+   */
+  private async actualizarInventarioConVersionCheck(
+    tx: PrismaTransactionClient,
+    inventarioId: string,
+    versionAnterior: number,
+    data: Record<string, unknown>,
+    filtrosAdicionales?: Record<string, unknown>,
+  ): Promise<void> {
+    const resultado = await tx.inventario.updateMany({
+      where: {
+        id: inventarioId,
+        version: versionAnterior,
+        ...filtrosAdicionales,
+      },
+      data,
+    });
+
+    if (resultado.count === 0) {
+      throw new OptimisticLockingError('Inventario', inventarioId);
     }
   }
 
@@ -80,18 +125,13 @@ export class InventarioPostgresRepository implements InventarioRepository {
     // Update with version check: only succeeds if version matches
     // Excludes deleted records from optimization check (they cannot be revived here)
     const versionAnterior = data.version - 1;
-    const resultado = await tx.inventario.updateMany({
-      where: {
-        id: inventario.id,
-        version: versionAnterior,
-        deleted: false,
-      },
+    await this.actualizarInventarioConVersionCheck(
+      tx,
+      inventario.id,
+      versionAnterior,
       data,
-    });
-
-    if (resultado.count === 0) {
-      throw new OptimisticLockingError('Inventario', inventario.id);
-    }
+      { deleted: false },
+    );
   }
 
   /**
@@ -285,17 +325,22 @@ export class InventarioPostgresRepository implements InventarioRepository {
     return datos.map((data) => this.mapearReservaADominio(data));
   }
 
+  /**
+   * Fetches inventory movements paginated and ordered by most recent first.
+   * Uses default pagination (limit=100, offset=0) for memory efficiency.
+   * Returns movements newest-first to facilitate activity tracking and debugging.
+   */
   async buscarMovimientos(
     inventarioId: string,
     options?: BuscarMovimientosOptions,
   ): Promise<MovimientoInventario[]> {
-    const prismaCtx = options?.transactionContext || this.prismaService.prisma;
+    const prismaCtx = options?.transactionContext ?? this.prismaService.prisma;
 
     const datos = await prismaCtx.movimientoInventario.findMany({
       where: { inventarioId },
       orderBy: { fechaMovimiento: 'desc' },
-      take: options?.limit || 100,
-      skip: options?.offset || 0,
+      take: options?.limit ?? 100,
+      skip: options?.offset ?? 0,
     });
 
     return datos.map((data) =>
@@ -308,7 +353,8 @@ export class InventarioPostgresRepository implements InventarioRepository {
   /**
    * Soft-deletes an inventory record (marks as deleted=true with optimistic locking).
    * This is logical deletion; the record remains in database for audit trail.
-   * @throws OptimisticLockingError if version mismatch detected
+   * Prevents reviving already-deleted records (only updates if deleted=false).
+   * @throws OptimisticLockingError if version mismatch detected or already deleted
    */
   async eliminar(
     inventario: Inventario,
@@ -318,42 +364,39 @@ export class InventarioPostgresRepository implements InventarioRepository {
       const data = PrismaInventarioMapper.toPersistence(inventario);
       const versionAnterior = data.version - 1;
 
-      const resultado = await tx.inventario.updateMany({
-        where: {
-          id: inventario.id,
-          version: versionAnterior,
-        },
-        data: {
+      // Use centralized version check logic with protection against re-deleting
+      await this.actualizarInventarioConVersionCheck(
+        tx,
+        inventario.id,
+        versionAnterior,
+        {
           deleted: true,
           version: data.version,
           fechaActualizacion: data.fechaActualizacion,
         },
-      });
-
-      if (resultado.count === 0) {
-        throw new OptimisticLockingError('Inventario', inventario.id);
-      }
+        { deleted: false }, // ← Only delete if not already deleted
+      );
     };
 
-    if (ctx) {
-      await ejecutarEliminacion(ctx);
-    } else {
-      await this.prismaService.prisma.$transaction(ejecutarEliminacion);
-    }
+    await this.ejecutarConTransaccion(ejecutarEliminacion, ctx);
   }
 
-  private mapearReservaADominio(data: any): Reserva {
+  /**
+   * Maps Prisma Reserva record to domain Reserva aggregate.
+   * Handles all fields including nullable resolution dates and actor information.
+   */
+  private mapearReservaADominio(data: PrismaReserva): Reserva {
     return Reserva.desde({
       id: data.id,
       inventarioId: data.inventarioId,
-      tipoOperacion: data.tipoOperacion,
+      tipoOperacion: data.tipoOperacion as TipoOperacionEnum,
       operacionId: data.operacionId,
       cantidad: data.cantidad,
-      estado: data.estado,
+      estado: data.estado as EstadoReservaEnum,
       fechaCreacion: data.fechaCreacion,
       fechaExpiracion: data.fechaExpiracion,
-      fechaResolucion: data.fechaResolucion,
-      actorTipo: data.actorTipo,
+      fechaResolucion: data.fechaResolucion ?? undefined,
+      actorTipo: data.actorTipo as TipoActorEnum,
       actorId: data.actorId,
     });
   }

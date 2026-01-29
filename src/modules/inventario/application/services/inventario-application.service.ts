@@ -279,7 +279,8 @@ export class InventarioApplicationService implements InventarioService {
   }
 
   /**
-   * Elimina inventario si no tiene dependencias (reservas activas, movimientos o items)
+   * Elimina inventario si no tiene dependencias significativas (reservas activas, movimientos de operación o items)
+   * Ignora el movimiento ENTRADA_INICIAL que se crea automáticamente al crear inventario
    * La eliminación es lógica (soft delete)
    */
   async eliminarInventario(
@@ -299,11 +300,17 @@ export class InventarioApplicationService implements InventarioService {
     );
     const movimientos = await this.inventarioRepo.buscarMovimientos(
       inventario.id,
-      { limit: 1 },
+      { limit: 100 }, // Traer más para validar
     );
 
     const tieneReservas = reservas.length > 0;
-    const tieneMovimientos = movimientos.length > 0;
+
+    // Filtrar movimientos ignorando ENTRADA_INICIAL (que es el primer movimiento del inventario)
+    const movimientosSignificativos = movimientos.filter(
+      (m) => m.intencion !== 'ENTRADA_INICIAL',
+    );
+    const tieneMovimientos = movimientosSignificativos.length > 0;
+
     // TODO: Verificar si hay items asociados cuando CATALOGO esté disponible
     const tieneItems = false;
 

@@ -16,6 +16,12 @@ import type {
  * IMPORTANTE: Esta es una entidad INSERT-ONLY. NUNCA se modifica ni elimina.
  */
 export class MovimientoInventario {
+  /**
+   * Intención de movimiento cuando se crea un inventario por primera vez.
+   * Used to distinguish initialization from actual business operations.
+   */
+  static readonly INTENCION_ENTRADA_INICIAL = 'ENTRADA_INICIAL';
+
   // Propiedades privadas inmutables (entidad INSERT-ONLY)
   #id: string;
   #inventarioId: string;

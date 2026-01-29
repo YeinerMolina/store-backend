@@ -70,7 +70,7 @@ export class InventarioApplicationService implements InventarioService {
       movimiento = inventario.ajustar({
         cantidad: request.cantidadInicial,
         empleadoId: request.empleadoId,
-        intencion: 'ENTRADA_INICIAL',
+        intencion: MovimientoInventario.INTENCION_ENTRADA_INICIAL,
         notas: request.notas,
       });
     }
@@ -305,7 +305,7 @@ export class InventarioApplicationService implements InventarioService {
 
     const tieneReservas = reservas.length > 0;
     const movimientosSignificativos = movimientos.filter(
-      (m) => m.intencion !== 'ENTRADA_INICIAL',
+      (m) => m.intencion !== MovimientoInventario.INTENCION_ENTRADA_INICIAL,
     );
     const tieneMovimientos = movimientosSignificativos.length > 0;
 

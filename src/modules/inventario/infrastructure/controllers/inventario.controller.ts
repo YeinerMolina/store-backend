@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Patch,
   Get,
   Body,
   Param,
@@ -8,11 +9,10 @@ import {
   Inject,
   HttpCode,
   HttpStatus,
-  UsePipes,
 } from '@nestjs/common';
+import { ValidateWith } from '../../../../shared/decorators/validate-with.decorator';
 import type { InventarioService } from '../../domain/ports/inbound/inventario.service';
 import { INVENTARIO_SERVICE_TOKEN } from '../../domain/ports/tokens';
-import { ZodValidationPipe } from '../../../../shared/pipes/zod-validation.pipe';
 import {
   ReservarInventarioSchema,
   type ReservarInventarioDto,
@@ -35,36 +35,38 @@ export class InventarioController {
   ) {}
 
   @Post('reservar')
+  @ValidateWith(ReservarInventarioSchema)
   @HttpCode(HttpStatus.CREATED)
   async reservarInventario(
-    @Body(new ZodValidationPipe(ReservarInventarioSchema))
-    dto: ReservarInventarioDto,
+    @Body() dto: ReservarInventarioDto,
   ): Promise<ReservaResponseDto> {
     return await this.inventarioService.reservarInventario(dto);
   }
 
-  @Post('consolidar')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @Patch('consolidar')
+  @ValidateWith(ConsolidarReservaSchema)
+  @HttpCode(HttpStatus.OK)
   async consolidarReserva(
-    @Body(new ZodValidationPipe(ConsolidarReservaSchema))
-    dto: ConsolidarReservaDto,
-  ): Promise<void> {
+    @Body() dto: ConsolidarReservaDto,
+  ): Promise<{ message: string }> {
     await this.inventarioService.consolidarReserva(dto);
+    return { message: 'Reserva consolidada exitosamente' };
   }
 
-  @Post('ajustar')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @Patch('ajustar')
+  @ValidateWith(AjustarInventarioSchema)
+  @HttpCode(HttpStatus.OK)
   async ajustarInventario(
-    @Body(new ZodValidationPipe(AjustarInventarioSchema))
-    dto: AjustarInventarioDto,
-  ): Promise<void> {
+    @Body() dto: AjustarInventarioDto,
+  ): Promise<{ message: string }> {
     await this.inventarioService.ajustarInventario(dto);
+    return { message: 'Inventario ajustado exitosamente' };
   }
 
   @Get('disponibilidad')
+  @ValidateWith(ConsultarDisponibilidadSchema)
   async consultarDisponibilidad(
-    @Query(new ZodValidationPipe(ConsultarDisponibilidadSchema))
-    query: ConsultarDisponibilidadDto,
+    @Query() query: ConsultarDisponibilidadDto,
   ): Promise<DisponibilidadResponseDto> {
     return await this.inventarioService.consultarDisponibilidad(query);
   }

@@ -8,6 +8,7 @@ export { INVENTARIO_REPOSITORY_TOKEN, TransactionContext };
 
 /**
  * Declarative options ensure all entities persist atomically in single transaction.
+ * transactionContext allows reusing an existing transaction context to avoid nesting.
  */
 export interface GuardarInventarioOptions {
   reservas?: {
@@ -15,19 +16,25 @@ export interface GuardarInventarioOptions {
     actualizadas?: Reserva[];
   };
   movimientos?: MovimientoInventario[];
+  transactionContext?: TransactionContext;
+}
+
+export interface BuscarMovimientosOptions {
+  limit?: number;
+  offset?: number;
+  transactionContext?: TransactionContext;
 }
 
 export interface InventarioRepository {
   /**
    * Version-based optimistic locking prevents lost updates when multiple processes modify simultaneously.
-   * Contexto transaccional opcional permite reutilizar transacción existente evitando anidación.
+   * Transaction context is embedded in options to avoid parameter nesting and maintain clean API.
    *
    * @throws OptimisticLockingError
    */
   guardar(
     inventario: Inventario,
     options?: GuardarInventarioOptions,
-    ctx?: TransactionContext,
   ): Promise<void>;
 
   buscarPorId(id: string, ctx?: TransactionContext): Promise<Inventario | null>;
@@ -59,8 +66,6 @@ export interface InventarioRepository {
 
   buscarMovimientos(
     inventarioId: string,
-    limit?: number,
-    offset?: number,
-    ctx?: TransactionContext,
+    options?: BuscarMovimientosOptions,
   ): Promise<MovimientoInventario[]>;
 }

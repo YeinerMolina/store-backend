@@ -23,6 +23,7 @@ import { InventarioMapper } from '../mappers/inventario.mapper';
 import { ReservaMapper } from '../mappers/reserva.mapper';
 import { StockBajoDetectado } from '../../domain/events/stock-bajo-detectado.event';
 import { InventarioFactory } from '../../domain/factories';
+import { MovimientoInventario } from '@inventario/domain/aggregates/inventario';
 
 @Injectable()
 export class InventarioApplicationService implements InventarioService {
@@ -63,7 +64,7 @@ export class InventarioApplicationService implements InventarioService {
       ubicacion: request.ubicacion,
     });
 
-    let movimiento;
+    let movimiento: MovimientoInventario | null = null;
     if (request.cantidadInicial > 0) {
       movimiento = inventario.ajustar({
         cantidad: request.cantidadInicial,
@@ -235,14 +236,14 @@ export class InventarioApplicationService implements InventarioService {
     }
 
     const disponible = inventario.verificarDisponibilidad(request.cantidad);
-
+    const mensaje = disponible
+      ? 'Stock disponible'
+      : `Stock insuficiente: disponible ${inventario.cantidadDisponible.obtenerValor()}, solicitado ${request.cantidad}`;
     return {
       disponible,
+      mensaje,
       cantidadDisponible: inventario.cantidadDisponible.obtenerValor(),
       cantidadSolicitada: request.cantidad,
-      mensaje: disponible
-        ? 'Stock disponible'
-        : `Stock insuficiente: disponible ${inventario.cantidadDisponible.obtenerValor()}, solicitado ${request.cantidad}`,
     };
   }
 

@@ -6,10 +6,12 @@ import { EstadoReservaEnum } from '../../../domain/aggregates/inventario/types';
 import type {
   InventarioRepository,
   GuardarInventarioOptions,
+  TransactionContext,
 } from '../../../domain/ports/outbound/inventario.repository';
 import { PrismaInventarioMapper } from '../mappers/prisma-inventario.mapper';
 import { PrismaService } from '../../../../../shared/database/prisma.service';
 import { OptimisticLockingError } from '../../../domain/exceptions';
+import type { PrismaTransactionClient } from '../types/prisma-transaction.type';
 
 @Injectable()
 export class InventarioPostgresRepository implements InventarioRepository {
@@ -18,10 +20,9 @@ export class InventarioPostgresRepository implements InventarioRepository {
   async guardar(
     inventario: Inventario,
     options?: GuardarInventarioOptions,
+    ctx?: TransactionContext,
   ): Promise<void> {
-    const prisma = this.prismaService.prisma;
-
-    await prisma.$transaction(async (tx) => {
+    const ejecutarGuardado = async (tx: PrismaTransactionClient) => {
       const data = PrismaInventarioMapper.toPersistence(inventario);
 
       const existe = await tx.inventario.findUnique({
@@ -97,12 +98,22 @@ export class InventarioPostgresRepository implements InventarioRepository {
           });
         }
       }
-    });
+    };
+
+    if (ctx) {
+      await ejecutarGuardado(ctx as PrismaTransactionClient);
+    } else {
+      await this.prismaService.prisma.$transaction(ejecutarGuardado);
+    }
   }
 
-  async buscarPorId(id: string): Promise<Inventario | null> {
-    const prisma = this.prismaService.prisma;
-    const data = await prisma.inventario.findUnique({
+  async buscarPorId(
+    id: string,
+    ctx?: TransactionContext,
+  ): Promise<Inventario | null> {
+    const prismaCtx =
+      (ctx as PrismaTransactionClient) || this.prismaService.prisma;
+    const data = await prismaCtx.inventario.findUnique({
       where: { id },
     });
 
@@ -112,12 +123,14 @@ export class InventarioPostgresRepository implements InventarioRepository {
   async buscarPorItem(
     tipoItem: string,
     itemId: string,
+    ctx?: TransactionContext,
   ): Promise<Inventario | null> {
-    const prisma = this.prismaService.prisma;
-    const data = await prisma.inventario.findUnique({
+    const prismaCtx =
+      (ctx as PrismaTransactionClient) || this.prismaService.prisma;
+    const data = await prismaCtx.inventario.findUnique({
       where: {
         idx_inventario_item: {
-          tipoItem: tipoItem as any,
+          tipoItem,
           itemId,
         },
       },
@@ -126,15 +139,20 @@ export class InventarioPostgresRepository implements InventarioRepository {
     return data ? Inventario.desde(data) : null;
   }
 
-  async buscarTodos(): Promise<Inventario[]> {
-    const prisma = this.prismaService.prisma;
-    const datos = await prisma.inventario.findMany();
+  async buscarTodos(ctx?: TransactionContext): Promise<Inventario[]> {
+    const prismaCtx =
+      (ctx as PrismaTransactionClient) || this.prismaService.prisma;
+    const datos = await prismaCtx.inventario.findMany();
     return datos.map((data) => Inventario.desde(data));
   }
 
-  async buscarInventariosBajoUmbral(umbral: number): Promise<Inventario[]> {
-    const prisma = this.prismaService.prisma;
-    const datos = await prisma.inventario.findMany({
+  async buscarInventariosBajoUmbral(
+    umbral: number,
+    ctx?: TransactionContext,
+  ): Promise<Inventario[]> {
+    const prismaCtx =
+      (ctx as PrismaTransactionClient) || this.prismaService.prisma;
+    const datos = await prismaCtx.inventario.findMany({
       where: {
         cantidadDisponible: {
           lt: umbral,
@@ -144,9 +162,13 @@ export class InventarioPostgresRepository implements InventarioRepository {
     return datos.map((data) => Inventario.desde(data));
   }
 
-  async buscarReservasActivas(operacionId: string): Promise<Reserva[]> {
-    const prisma = this.prismaService.prisma;
-    const datos = await prisma.reserva.findMany({
+  async buscarReservasActivas(
+    operacionId: string,
+    ctx?: TransactionContext,
+  ): Promise<Reserva[]> {
+    const prismaCtx =
+      (ctx as PrismaTransactionClient) || this.prismaService.prisma;
+    const datos = await prismaCtx.reserva.findMany({
       where: {
         operacionId,
         estado: EstadoReservaEnum.ACTIVA,
@@ -156,11 +178,12 @@ export class InventarioPostgresRepository implements InventarioRepository {
     return datos.map((data) => this.mapearReservaADominio(data));
   }
 
-  async buscarReservasExpiradas(): Promise<Reserva[]> {
-    const prisma = this.prismaService.prisma;
+  async buscarReservasExpiradas(ctx?: TransactionContext): Promise<Reserva[]> {
+    const prismaCtx =
+      (ctx as PrismaTransactionClient) || this.prismaService.prisma;
     const ahora = new Date();
 
-    const datos = await prisma.reserva.findMany({
+    const datos = await prismaCtx.reserva.findMany({
       where: {
         estado: EstadoReservaEnum.ACTIVA,
         fechaExpiracion: {
@@ -172,9 +195,13 @@ export class InventarioPostgresRepository implements InventarioRepository {
     return datos.map((data) => this.mapearReservaADominio(data));
   }
 
-  async buscarReservasPorInventario(inventarioId: string): Promise<Reserva[]> {
-    const prisma = this.prismaService.prisma;
-    const datos = await prisma.reserva.findMany({
+  async buscarReservasPorInventario(
+    inventarioId: string,
+    ctx?: TransactionContext,
+  ): Promise<Reserva[]> {
+    const prismaCtx =
+      (ctx as PrismaTransactionClient) || this.prismaService.prisma;
+    const datos = await prismaCtx.reserva.findMany({
       where: { inventarioId },
     });
 
@@ -185,10 +212,12 @@ export class InventarioPostgresRepository implements InventarioRepository {
     inventarioId: string,
     limit?: number,
     offset?: number,
+    ctx?: TransactionContext,
   ): Promise<MovimientoInventario[]> {
-    const prisma = this.prismaService.prisma;
+    const prismaCtx =
+      (ctx as PrismaTransactionClient) || this.prismaService.prisma;
 
-    const datos = await prisma.movimientoInventario.findMany({
+    const datos = await prismaCtx.movimientoInventario.findMany({
       where: { inventarioId },
       orderBy: { fechaMovimiento: 'desc' },
       take: limit || 100,

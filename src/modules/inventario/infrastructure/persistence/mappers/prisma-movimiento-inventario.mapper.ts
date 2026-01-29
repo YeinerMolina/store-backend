@@ -19,10 +19,10 @@ export class PrismaMovimientoInventarioMapper {
       tipoOperacionOrigen: prismaData.tipoOperacionOrigen
         ? (prismaData.tipoOperacionOrigen as TipoOperacionEnum)
         : undefined,
-      operacionOrigenId: prismaData.operacionOrigenId || undefined,
-      empleadoId: prismaData.empleadoId || undefined,
-      intencion: prismaData.intencion || undefined,
-      notas: prismaData.notas || undefined,
+      operacionOrigenId: prismaData.operacionOrigenId ?? undefined,
+      empleadoId: prismaData.empleadoId ?? undefined,
+      intencion: prismaData.intencion ?? undefined,
+      notas: prismaData.notas ?? undefined,
       fechaMovimiento: prismaData.fechaMovimiento,
     };
   }

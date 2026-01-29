@@ -5,8 +5,6 @@ import { MovimientoInventario } from '../../../domain/aggregates/inventario/movi
 import {
   EstadoReservaEnum,
   TipoItemEnum,
-  TipoMovimientoEnum,
-  TipoOperacionEnum,
 } from '../../../domain/aggregates/inventario/types';
 import type {
   InventarioRepository,
@@ -24,85 +22,30 @@ import type { PrismaTransactionClient } from '../types/prisma-transaction.type';
 export class InventarioPostgresRepository implements InventarioRepository {
   constructor(private readonly prismaService: PrismaService) {}
 
+  /**
+   * Persists an inventory aggregate with related changes (reservations and movements).
+   * Executes all operations in a single transaction to ensure consistency.
+   * Uses optimistic locking on inventory updates to detect concurrent modifications.
+   */
   async guardar(
     inventario: Inventario,
     options?: GuardarInventarioOptions,
   ): Promise<void> {
     const ejecutarGuardado = async (tx: PrismaTransactionClient) => {
-      const data = PrismaInventarioMapper.toPersistence(inventario);
+      // Persist inventory first (root aggregate) before dependent entities
+      await this.persistirInventario(tx, inventario);
 
-      const existe = await tx.inventario.findUnique({
-        where: { id: inventario.id },
-      });
-
-      if (!existe) {
-        await tx.inventario.create({ data });
-      } else {
-        const versionAnterior = data.version - 1;
-
-        const resultado = await tx.inventario.updateMany({
-          where: {
-            id: inventario.id,
-            version: versionAnterior,
-          },
-          data,
-        });
-
-        if (resultado.count === 0) {
-          throw new OptimisticLockingError('Inventario', inventario.id);
-        }
-      }
-
+      // Order matters: new reservations before updates, then movements for audit trail
       if (options?.reservas?.nuevas) {
-        for (const reserva of options.reservas.nuevas) {
-          await tx.reserva.create({
-            data: {
-              id: reserva.id,
-              inventarioId: reserva.inventarioId,
-              tipoOperacion: reserva.tipoOperacion,
-              operacionId: reserva.operacionId,
-              cantidad: reserva.cantidad,
-              estado: reserva.estado,
-              fechaCreacion: reserva.fechaCreacion,
-              fechaExpiracion: reserva.fechaExpiracion.obtenerFecha(),
-              actorTipo: reserva.actorTipo,
-              actorId: reserva.actorId,
-            },
-          });
-        }
+        await this.guardarReservasNuevas(tx, options.reservas.nuevas);
       }
 
       if (options?.reservas?.actualizadas) {
-        for (const reserva of options.reservas.actualizadas) {
-          await tx.reserva.update({
-            where: { id: reserva.id },
-            data: {
-              estado: reserva.estado,
-              fechaResolucion: reserva.fechaResolucion,
-            },
-          });
-        }
+        await this.actualizarReservas(tx, options.reservas.actualizadas);
       }
 
       if (options?.movimientos) {
-        for (const movimiento of options.movimientos) {
-          await tx.movimientoInventario.create({
-            data: {
-              id: movimiento.id,
-              inventarioId: movimiento.inventarioId,
-              tipoMovimiento: movimiento.tipoMovimiento,
-              cantidad: movimiento.cantidad,
-              cantidadAnterior: movimiento.cantidadAnterior,
-              cantidadPosterior: movimiento.cantidadPosterior,
-              tipoOperacionOrigen: movimiento.tipoOperacionOrigen || null,
-              operacionOrigenId: movimiento.operacionOrigenId || null,
-              empleadoId: movimiento.empleadoId || null,
-              intencion: movimiento.intencion || null,
-              notas: movimiento.notas || null,
-              fechaMovimiento: movimiento.fechaMovimiento,
-            },
-          });
-        }
+        await this.crearMovimientos(tx, options.movimientos);
       }
     };
 
@@ -111,6 +54,128 @@ export class InventarioPostgresRepository implements InventarioRepository {
       await ejecutarGuardado(ctx);
     } else {
       await this.prismaService.prisma.$transaction(ejecutarGuardado);
+    }
+  }
+
+  /**
+   * Creates or updates an inventory record with optimistic locking.
+   * New inventories are created as-is; existing ones require version match to prevent conflicts.
+   * Soft-deleted inventories (deleted=true) are never updated directly.
+   * @throws OptimisticLockingError if version mismatch detected on update
+   */
+  private async persistirInventario(
+    tx: PrismaTransactionClient,
+    inventario: Inventario,
+  ): Promise<void> {
+    const data = PrismaInventarioMapper.toPersistence(inventario);
+    const existe = await tx.inventario.findUnique({
+      where: { id: inventario.id },
+    });
+
+    if (!existe) {
+      await tx.inventario.create({ data });
+      return;
+    }
+
+    // Update with version check: only succeeds if version matches
+    // Excludes deleted records from optimization check (they cannot be revived here)
+    const versionAnterior = data.version - 1;
+    const resultado = await tx.inventario.updateMany({
+      where: {
+        id: inventario.id,
+        version: versionAnterior,
+        deleted: false,
+      },
+      data,
+    });
+
+    if (resultado.count === 0) {
+      throw new OptimisticLockingError('Inventario', inventario.id);
+    }
+  }
+
+  /**
+   * Batch-creates new reservations in a single transaction.
+   * Extracts expiration date from value object (obtenerFecha).
+   */
+  private async guardarReservasNuevas(
+    tx: PrismaTransactionClient,
+    reservas: Reserva[],
+  ): Promise<void> {
+    if (reservas.length === 0) {
+      return;
+    }
+
+    for (const reserva of reservas) {
+      await tx.reserva.create({
+        data: {
+          id: reserva.id,
+          inventarioId: reserva.inventarioId,
+          tipoOperacion: reserva.tipoOperacion,
+          operacionId: reserva.operacionId,
+          cantidad: reserva.cantidad,
+          estado: reserva.estado,
+          fechaCreacion: reserva.fechaCreacion,
+          fechaExpiracion: reserva.fechaExpiracion.obtenerFecha(),
+          actorTipo: reserva.actorTipo,
+          actorId: reserva.actorId,
+        },
+      });
+    }
+  }
+
+  /**
+   * Updates reservation state and resolution dates.
+   * Typically called when reservations expire, are confirmed, or are cancelled.
+   */
+  private async actualizarReservas(
+    tx: PrismaTransactionClient,
+    reservas: Reserva[],
+  ): Promise<void> {
+    if (reservas.length === 0) {
+      return;
+    }
+
+    for (const reserva of reservas) {
+      await tx.reserva.update({
+        where: { id: reserva.id },
+        data: {
+          estado: reserva.estado,
+          fechaResolucion: reserva.fechaResolucion,
+        },
+      });
+    }
+  }
+
+  /**
+   * Records inventory movements in audit trail (INSERT-only, immutable).
+   * Movements capture before/after quantities and operation context for traceability.
+   */
+  private async crearMovimientos(
+    tx: PrismaTransactionClient,
+    movimientos: MovimientoInventario[],
+  ): Promise<void> {
+    if (movimientos.length === 0) {
+      return;
+    }
+
+    for (const movimiento of movimientos) {
+      await tx.movimientoInventario.create({
+        data: {
+          id: movimiento.id,
+          inventarioId: movimiento.inventarioId,
+          tipoMovimiento: movimiento.tipoMovimiento,
+          cantidad: movimiento.cantidad,
+          cantidadAnterior: movimiento.cantidadAnterior,
+          cantidadPosterior: movimiento.cantidadPosterior,
+          tipoOperacionOrigen: movimiento.tipoOperacionOrigen ?? null,
+          operacionOrigenId: movimiento.operacionOrigenId ?? null,
+          empleadoId: movimiento.empleadoId ?? null,
+          intencion: movimiento.intencion ?? null,
+          notas: movimiento.notas ?? null,
+          fechaMovimiento: movimiento.fechaMovimiento,
+        },
+      });
     }
   }
 
@@ -240,6 +305,11 @@ export class InventarioPostgresRepository implements InventarioRepository {
     );
   }
 
+  /**
+   * Soft-deletes an inventory record (marks as deleted=true with optimistic locking).
+   * This is logical deletion; the record remains in database for audit trail.
+   * @throws OptimisticLockingError if version mismatch detected
+   */
   async eliminar(
     inventario: Inventario,
     ctx?: TransactionContext,

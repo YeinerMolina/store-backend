@@ -77,6 +77,7 @@ model Inventario {
   cantidadReservada  Int      @default(0) @map("cantidad_reservada")
   cantidadAbandono   Int      @default(0) @map("cantidad_abandono")
   version            Int      @default(1) @map("version")
+  deleted            Boolean  @default(false) @map("deleted")
   fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
 
   reservas    Reserva[]

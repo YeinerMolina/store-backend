@@ -15,17 +15,18 @@
 
 ## 1. Inventario
 
-| Campo                 | Tipo        | Restricciones        | Descripción           |
-| --------------------- | ----------- | -------------------- | --------------------- |
-| `id`                  | uuid        | PK                   | Identificador único   |
-| `tipo_item`           | enum        | not null             | PRODUCTO, PAQUETE     |
-| `item_id`             | uuid        | not null             | FK polim\u00f3rfica   |
-| `ubicacion`           | varchar(50) | nullable             | Ubicaci\u00f3n física |
-| `cantidad_disponible` | int         | not null, default: 0 | Stock libre           |
-| `cantidad_reservada`  | int         | not null, default: 0 | Stock reservado       |
-| `cantidad_abandono`   | int         | not null, default: 0 | Stock en abandono     |
-| `version`             | int         | not null, default: 1 | Control concurrencia  |
-| `fecha_actualizacion` | timestamp   | not null             | Última actualización  |
+| Campo                 | Tipo        | Restricciones            | Descripción                  |
+| --------------------- | ----------- | ------------------------ | ---------------------------- |
+| `id`                  | uuid        | PK                       | Identificador único          |
+| `tipo_item`           | enum        | not null                 | PRODUCTO, PAQUETE            |
+| `item_id`             | uuid        | not null                 | FK polimórfica               |
+| `ubicacion`           | varchar(50) | nullable                 | Ubicación física             |
+| `cantidad_disponible` | int         | not null, default: 0     | Stock libre                  |
+| `cantidad_reservada`  | int         | not null, default: 0     | Stock reservado              |
+| `cantidad_abandono`   | int         | not null, default: 0     | Stock en abandono            |
+| `version`             | int         | not null, default: 1     | Control concurrencia         |
+| `deleted`             | boolean     | not null, default: false | Borrado lógico (soft delete) |
+| `fecha_actualizacion` | timestamp   | not null                 | Última actualización         |
 
 **Constraints**:
 

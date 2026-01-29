@@ -23,7 +23,7 @@ export class PrismaInventarioMapper {
       id: prismaData.id,
       tipoItem: prismaData.tipoItem as TipoItemEnum,
       itemId: prismaData.itemId,
-      ubicacion: prismaData.ubicacion || undefined,
+      ubicacion: prismaData.ubicacion ?? undefined,
       cantidadDisponible: prismaData.cantidadDisponible,
       cantidadReservada: prismaData.cantidadReservada,
       cantidadAbandono: prismaData.cantidadAbandono,

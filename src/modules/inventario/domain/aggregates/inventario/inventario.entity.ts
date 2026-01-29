@@ -363,10 +363,9 @@ export class Inventario {
   }
 
   /**
-   * Marca inventario como eliminado (soft delete)
-   * Solo es posible si no tiene reservas activas, movimientos o items asociados
-   *
-   * @throws InventarioConDependenciasError si hay dependencias
+   * Soft delete: can only be performed if no active reservas, movements (except ENTRADA_INICIAL),
+   * or catalog items. Dependencies validated before calling this method.
+   * @throws InventarioConDependenciasError
    */
   eliminar(
     tieneReservas: boolean,

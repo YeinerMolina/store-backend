@@ -70,9 +70,7 @@ export interface InventarioRepository {
   ): Promise<MovimientoInventario[]>;
 
   /**
-   * Marks inventory as deleted (soft delete) after validating no dependencies exist.
-   * Version-based optimistic locking prevents concurrent modifications.
-   *
+   * Version-based optimistic locking ensures atomic soft delete despite concurrent updates.
    * @throws OptimisticLockingError
    */
   eliminar(inventario: Inventario, ctx?: TransactionContext): Promise<void>;

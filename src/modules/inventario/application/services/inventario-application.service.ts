@@ -279,9 +279,10 @@ export class InventarioApplicationService implements InventarioService {
   }
 
   /**
-   * Elimina inventario si no tiene dependencias significativas (reservas activas, movimientos de operación o items)
-   * Ignora el movimiento ENTRADA_INICIAL que se crea automáticamente al crear inventario
-   * La eliminación es lógica (soft delete)
+   * Allows deletion only if inventory has no live reservations or meaningful movements.
+   * Ignores ENTRADA_INICIAL because it's an automatic initialization movement created
+   * when inventory is first setup—not a business operation. This allows users to delete
+   * freshly created inventories without being blocked by their own initialization record.
    */
   async eliminarInventario(
     request: EliminarInventarioRequestDto,
@@ -294,18 +295,15 @@ export class InventarioApplicationService implements InventarioService {
       throw new EntidadNoEncontradaError('Inventario', request.inventarioId);
     }
 
-    // Verificar dependencias
     const reservas = await this.inventarioRepo.buscarReservasPorInventario(
       inventario.id,
     );
     const movimientos = await this.inventarioRepo.buscarMovimientos(
       inventario.id,
-      { limit: 100 }, // Traer más para validar
+      { limit: 100 },
     );
 
     const tieneReservas = reservas.length > 0;
-
-    // Filtrar movimientos ignorando ENTRADA_INICIAL (que es el primer movimiento del inventario)
     const movimientosSignificativos = movimientos.filter(
       (m) => m.intencion !== 'ENTRADA_INICIAL',
     );
@@ -314,13 +312,9 @@ export class InventarioApplicationService implements InventarioService {
     // TODO: Verificar si hay items asociados cuando CATALOGO esté disponible
     const tieneItems = false;
 
-    // Lanzar excepción si hay dependencias
     inventario.eliminar(tieneReservas, tieneMovimientos, tieneItems);
-
-    // Guardar cambio
     await this.inventarioRepo.eliminar(inventario);
 
-    // Publicar evento
     for (const evento of inventario.domainEvents) {
       await this.eventBus.publicar(evento);
     }

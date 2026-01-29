@@ -2,13 +2,19 @@ import { Injectable } from '@nestjs/common';
 import { Inventario } from '../../../domain/aggregates/inventario/inventario.entity';
 import { Reserva } from '../../../domain/aggregates/inventario/reserva.entity';
 import { MovimientoInventario } from '../../../domain/aggregates/inventario/movimiento-inventario.entity';
-import { EstadoReservaEnum } from '../../../domain/aggregates/inventario/types';
+import {
+  EstadoReservaEnum,
+  TipoItemEnum,
+  TipoMovimientoEnum,
+  TipoOperacionEnum,
+} from '../../../domain/aggregates/inventario/types';
 import type {
   InventarioRepository,
   GuardarInventarioOptions,
   TransactionContext,
 } from '../../../domain/ports/outbound/inventario.repository';
 import { PrismaInventarioMapper } from '../mappers/prisma-inventario.mapper';
+import { PrismaMovimientoInventarioMapper } from '../mappers/prisma-movimiento-inventario.mapper';
 import { PrismaService } from '../../../../../shared/database/prisma.service';
 import { OptimisticLockingError } from '../../../domain/exceptions';
 import type { PrismaTransactionClient } from '../types/prisma-transaction.type';
@@ -117,7 +123,9 @@ export class InventarioPostgresRepository implements InventarioRepository {
       where: { id },
     });
 
-    return data ? Inventario.desde(data) : null;
+    return data
+      ? Inventario.desde(PrismaInventarioMapper.toDomain(data))
+      : null;
   }
 
   async buscarPorItem(
@@ -130,20 +138,24 @@ export class InventarioPostgresRepository implements InventarioRepository {
     const data = await prismaCtx.inventario.findUnique({
       where: {
         idx_inventario_item: {
-          tipoItem,
+          tipoItem: tipoItem as TipoItemEnum,
           itemId,
         },
       },
     });
 
-    return data ? Inventario.desde(data) : null;
+    return data
+      ? Inventario.desde(PrismaInventarioMapper.toDomain(data))
+      : null;
   }
 
   async buscarTodos(ctx?: TransactionContext): Promise<Inventario[]> {
     const prismaCtx =
       (ctx as PrismaTransactionClient) || this.prismaService.prisma;
     const datos = await prismaCtx.inventario.findMany();
-    return datos.map((data) => Inventario.desde(data));
+    return datos.map((data) =>
+      Inventario.desde(PrismaInventarioMapper.toDomain(data)),
+    );
   }
 
   async buscarInventariosBajoUmbral(
@@ -159,7 +171,9 @@ export class InventarioPostgresRepository implements InventarioRepository {
         },
       },
     });
-    return datos.map((data) => Inventario.desde(data));
+    return datos.map((data) =>
+      Inventario.desde(PrismaInventarioMapper.toDomain(data)),
+    );
   }
 
   async buscarReservasActivas(
@@ -224,7 +238,11 @@ export class InventarioPostgresRepository implements InventarioRepository {
       skip: offset || 0,
     });
 
-    return datos.map((data) => MovimientoInventario.desde(data));
+    return datos.map((data) =>
+      MovimientoInventario.desde(
+        PrismaMovimientoInventarioMapper.toDomain(data),
+      ),
+    );
   }
 
   private mapearReservaADominio(data: any): Reserva {

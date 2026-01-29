@@ -5,8 +5,6 @@ import { MovimientoInventario } from '../../../domain/aggregates/inventario/movi
 import {
   EstadoReservaEnum,
   TipoItemEnum,
-  TipoOperacionEnum,
-  TipoActorEnum,
 } from '../../../domain/aggregates/inventario/types';
 import type {
   InventarioRepository,
@@ -16,10 +14,10 @@ import type {
 } from '../../../domain/ports/outbound/inventario.repository';
 import { PrismaInventarioMapper } from '../mappers/prisma-inventario.mapper';
 import { PrismaMovimientoInventarioMapper } from '../mappers/prisma-movimiento-inventario.mapper';
+import { PrismaReservaMapper } from '../mappers/prisma-reserva.mapper';
 import { PrismaService } from '../../../../../shared/database/prisma.service';
 import { OptimisticLockingError } from '../../../domain/exceptions';
 import type { PrismaTransactionClient } from '../types/prisma-transaction.type';
-import type { Reserva as PrismaReserva } from '@prisma/client';
 
 @Injectable()
 export class InventarioPostgresRepository implements InventarioRepository {
@@ -290,7 +288,7 @@ export class InventarioPostgresRepository implements InventarioRepository {
       },
     });
 
-    return datos.map((data) => this.mapearReservaADominio(data));
+    return datos.map((data) => PrismaReservaMapper.toDomain(data));
   }
 
   async buscarReservasExpiradas(ctx?: TransactionContext): Promise<Reserva[]> {
@@ -306,7 +304,7 @@ export class InventarioPostgresRepository implements InventarioRepository {
       },
     });
 
-    return datos.map((data) => this.mapearReservaADominio(data));
+    return datos.map((data) => PrismaReservaMapper.toDomain(data));
   }
 
   async buscarReservasPorInventario(
@@ -318,7 +316,7 @@ export class InventarioPostgresRepository implements InventarioRepository {
       where: { inventarioId },
     });
 
-    return datos.map((data) => this.mapearReservaADominio(data));
+    return datos.map((data) => PrismaReservaMapper.toDomain(data));
   }
 
   /**
@@ -374,25 +372,5 @@ export class InventarioPostgresRepository implements InventarioRepository {
     };
 
     await this.ejecutarConTransaccion(ejecutarEliminacion, ctx);
-  }
-
-  /**
-   * Maps Prisma Reserva record to domain Reserva aggregate.
-   * Handles all fields including nullable resolution dates and actor information.
-   */
-  private mapearReservaADominio(data: PrismaReserva): Reserva {
-    return Reserva.desde({
-      id: data.id,
-      inventarioId: data.inventarioId,
-      tipoOperacion: data.tipoOperacion as TipoOperacionEnum,
-      operacionId: data.operacionId,
-      cantidad: data.cantidad,
-      estado: data.estado as EstadoReservaEnum,
-      fechaCreacion: data.fechaCreacion,
-      fechaExpiracion: data.fechaExpiracion,
-      fechaResolucion: data.fechaResolucion ?? undefined,
-      actorTipo: data.actorTipo as TipoActorEnum,
-      actorId: data.actorId,
-    });
   }
 }

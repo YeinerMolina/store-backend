@@ -22,6 +22,7 @@ export interface InventarioData {
   readonly cantidadAbandono: number;
   readonly version: number;
   readonly fechaActualizacion: Date;
+  readonly deleted?: boolean;
 }
 
 /**

@@ -120,7 +120,7 @@ export class InventarioPostgresRepository implements InventarioRepository {
   ): Promise<Inventario | null> {
     const prismaCtx = ctx || this.prismaService.prisma;
     const data = await prismaCtx.inventario.findUnique({
-      where: { id },
+      where: { id, deleted: false },
     });
 
     return data
@@ -140,6 +140,7 @@ export class InventarioPostgresRepository implements InventarioRepository {
           tipoItem: tipoItem as TipoItemEnum,
           itemId,
         },
+        deleted: false,
       },
     });
 
@@ -150,7 +151,9 @@ export class InventarioPostgresRepository implements InventarioRepository {
 
   async buscarTodos(ctx?: TransactionContext): Promise<Inventario[]> {
     const prismaCtx = ctx || this.prismaService.prisma;
-    const datos = await prismaCtx.inventario.findMany();
+    const datos = await prismaCtx.inventario.findMany({
+      where: { deleted: false },
+    });
     return datos.map((data) =>
       Inventario.desde(PrismaInventarioMapper.toDomain(data)),
     );
@@ -163,6 +166,7 @@ export class InventarioPostgresRepository implements InventarioRepository {
     const prismaCtx = ctx || this.prismaService.prisma;
     const datos = await prismaCtx.inventario.findMany({
       where: {
+        deleted: false,
         cantidadDisponible: {
           lt: umbral,
         },
@@ -234,6 +238,38 @@ export class InventarioPostgresRepository implements InventarioRepository {
         PrismaMovimientoInventarioMapper.toDomain(data),
       ),
     );
+  }
+
+  async eliminar(
+    inventario: Inventario,
+    ctx?: TransactionContext,
+  ): Promise<void> {
+    const ejecutarEliminacion = async (tx: PrismaTransactionClient) => {
+      const data = PrismaInventarioMapper.toPersistence(inventario);
+      const versionAnterior = data.version - 1;
+
+      const resultado = await tx.inventario.updateMany({
+        where: {
+          id: inventario.id,
+          version: versionAnterior,
+        },
+        data: {
+          deleted: true,
+          version: data.version,
+          fechaActualizacion: data.fechaActualizacion,
+        },
+      });
+
+      if (resultado.count === 0) {
+        throw new OptimisticLockingError('Inventario', inventario.id);
+      }
+    };
+
+    if (ctx) {
+      await ejecutarEliminacion(ctx);
+    } else {
+      await this.prismaService.prisma.$transaction(ejecutarEliminacion);
+    }
   }
 
   private mapearReservaADominio(data: any): Reserva {

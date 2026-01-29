@@ -16,6 +16,7 @@ import { ReservarInventarioRequestDto } from '../dto/reservar-inventario-request
 import { ConsolidarReservaRequestDto } from '../dto/consolidar-reserva-request.dto';
 import { AjustarInventarioRequestDto } from '../dto/ajustar-inventario-request.dto';
 import { ConsultarDisponibilidadRequestDto } from '../dto/consultar-disponibilidad-request.dto';
+import { EliminarInventarioRequestDto } from '../dto/eliminar-inventario-request.dto';
 import { InventarioResponseDto } from '../dto/inventario-response.dto';
 import { ReservaResponseDto } from '../dto/reserva-response.dto';
 import { DisponibilidadResponseDto } from '../dto/disponibilidad-response.dto';
@@ -275,5 +276,47 @@ export class InventarioApplicationService implements InventarioService {
       );
       await this.eventBus.publicar(evento);
     }
+  }
+
+  /**
+   * Elimina inventario si no tiene dependencias (reservas activas, movimientos o items)
+   * La eliminación es lógica (soft delete)
+   */
+  async eliminarInventario(
+    request: EliminarInventarioRequestDto,
+  ): Promise<void> {
+    const inventario = await this.inventarioRepo.buscarPorId(
+      request.inventarioId,
+    );
+
+    if (!inventario) {
+      throw new EntidadNoEncontradaError('Inventario', request.inventarioId);
+    }
+
+    // Verificar dependencias
+    const reservas = await this.inventarioRepo.buscarReservasPorInventario(
+      inventario.id,
+    );
+    const movimientos = await this.inventarioRepo.buscarMovimientos(
+      inventario.id,
+      { limit: 1 },
+    );
+
+    const tieneReservas = reservas.length > 0;
+    const tieneMovimientos = movimientos.length > 0;
+    // TODO: Verificar si hay items asociados cuando CATALOGO esté disponible
+    const tieneItems = false;
+
+    // Lanzar excepción si hay dependencias
+    inventario.eliminar(tieneReservas, tieneMovimientos, tieneItems);
+
+    // Guardar cambio
+    await this.inventarioRepo.eliminar(inventario);
+
+    // Publicar evento
+    for (const evento of inventario.domainEvents) {
+      await this.eventBus.publicar(evento);
+    }
+    inventario.clearDomainEvents();
   }
 }

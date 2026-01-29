@@ -54,12 +54,14 @@ model Inventario {
   cantidadAbandono   Int      @default(0) @map("cantidad_abandono")
   version            Int      @default(1) @map("version")
   fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+  deleted            Boolean  @default(false) @map("deleted")
 
   reservas    Reserva[]
   movimientos MovimientoInventario[]
 
   @@unique([tipoItem, itemId], name: "idx_inventario_item")
   @@index([ubicacion], name: "idx_inventario_ubicacion")
+  @@index([deleted], name: "idx_inventario_deleted")
   @@map("inventario")
 }
 

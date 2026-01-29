@@ -3,6 +3,7 @@ import type { ConsolidarReservaRequestDto } from '../../../application/dto/conso
 import type { AjustarInventarioRequestDto } from '../../../application/dto/ajustar-inventario-request.dto';
 import type { CrearInventarioRequestDto } from '../../../application/dto/crear-inventario-request.dto';
 import type { ConsultarDisponibilidadRequestDto } from '../../../application/dto/consultar-disponibilidad-request.dto';
+import type { EliminarInventarioRequestDto } from '../../../application/dto/eliminar-inventario-request.dto';
 import type { ReservaResponseDto } from '../../../application/dto/reserva-response.dto';
 import type { DisponibilidadResponseDto } from '../../../application/dto/disponibilidad-response.dto';
 import type { InventarioResponseDto } from '../../../application/dto/inventario-response.dto';
@@ -56,4 +57,14 @@ export interface InventarioService {
   ): Promise<InventarioResponseDto>;
 
   detectarStockBajo(umbral: number): Promise<void>;
+
+  /**
+   * Elimina inventario si no tiene dependencias (reservas, movimientos o items)
+   * La eliminación es lógica (soft delete)
+   *
+   * @throws EntidadNoEncontradaError
+   * @throws InventarioConDependenciasError
+   * @throws OptimisticLockingError
+   */
+  eliminarInventario(request: EliminarInventarioRequestDto): Promise<void>;
 }

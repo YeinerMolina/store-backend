@@ -7,8 +7,13 @@ import { InventarioCreado } from '../../events/inventario-creado.event';
 import { InventarioReservado } from '../../events/inventario-reservado.event';
 import { InventarioDescontado } from '../../events/inventario-descontado.event';
 import { InventarioAjustado } from '../../events/inventario-ajustado.event';
+import { InventarioEliminado } from '../../events/inventario-eliminado.event';
 import { ReservaExpirada } from '../../events/reserva-expirada.event';
-import { StockInsuficienteError, EstadoInvalidoError } from '../../exceptions';
+import {
+  StockInsuficienteError,
+  EstadoInvalidoError,
+  InventarioConDependenciasError,
+} from '../../exceptions';
 import { ReservaFactory } from '../../factories/reserva.factory';
 import { MovimientoInventarioFactory } from '../../factories/movimiento-inventario.factory';
 import type {
@@ -26,6 +31,7 @@ type DomainEvent =
   | InventarioReservado
   | InventarioDescontado
   | InventarioAjustado
+  | InventarioEliminado
   | ReservaExpirada;
 
 /**
@@ -51,6 +57,7 @@ export class Inventario {
   #cantidadAbandono: Cantidad;
   #version: Version;
   #fechaActualizacion: Date;
+  #deleted: boolean = false;
   #domainEvents: DomainEvent[] = [];
 
   get id(): string {
@@ -89,6 +96,10 @@ export class Inventario {
     return this.#fechaActualizacion;
   }
 
+  get deleted(): boolean {
+    return this.#deleted;
+  }
+
   private constructor() {}
 
   static desde(data: InventarioData): Inventario {
@@ -102,6 +113,7 @@ export class Inventario {
     inventario.#cantidadAbandono = Cantidad.crear(data.cantidadAbandono);
     inventario.#version = Version.crear(data.version);
     inventario.#fechaActualizacion = data.fechaActualizacion;
+    inventario.#deleted = data.deleted ?? false;
 
     return inventario;
   }
@@ -348,6 +360,44 @@ export class Inventario {
 
   estaBajoUmbral(umbral: number): boolean {
     return this.cantidadDisponible.obtenerValor() < umbral;
+  }
+
+  /**
+   * Marca inventario como eliminado (soft delete)
+   * Solo es posible si no tiene reservas activas, movimientos o items asociados
+   *
+   * @throws InventarioConDependenciasError si hay dependencias
+   */
+  eliminar(
+    tieneReservas: boolean,
+    tieneMovimientos: boolean,
+    tieneItems: boolean,
+  ): void {
+    if (tieneReservas) {
+      throw new InventarioConDependenciasError(
+        'No se puede eliminar inventario con reservas activas',
+      );
+    }
+
+    if (tieneMovimientos) {
+      throw new InventarioConDependenciasError(
+        'No se puede eliminar inventario que tiene movimientos registrados',
+      );
+    }
+
+    if (tieneItems) {
+      throw new InventarioConDependenciasError(
+        'No se puede eliminar inventario que tiene items asociados',
+      );
+    }
+
+    this.#deleted = true;
+    this.#version = this.#version.incrementar();
+    this.#fechaActualizacion = new Date();
+
+    this.addDomainEvent(
+      new InventarioEliminado(this.id, this.tipoItem, this.itemId),
+    );
   }
 
   get domainEvents(): readonly DomainEvent[] {

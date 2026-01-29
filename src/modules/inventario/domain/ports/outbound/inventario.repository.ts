@@ -68,4 +68,12 @@ export interface InventarioRepository {
     inventarioId: string,
     options?: BuscarMovimientosOptions,
   ): Promise<MovimientoInventario[]>;
+
+  /**
+   * Marks inventory as deleted (soft delete) after validating no dependencies exist.
+   * Version-based optimistic locking prevents concurrent modifications.
+   *
+   * @throws OptimisticLockingError
+   */
+  eliminar(inventario: Inventario, ctx?: TransactionContext): Promise<void>;
 }

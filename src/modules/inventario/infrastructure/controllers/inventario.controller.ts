@@ -3,6 +3,7 @@ import {
   Post,
   Patch,
   Get,
+  Delete,
   Body,
   Param,
   Query,
@@ -91,5 +92,14 @@ export class InventarioController {
       tipoItem,
       itemId,
     );
+  }
+
+  @Delete(':inventarioId')
+  @HttpCode(HttpStatus.OK)
+  async eliminarInventario(
+    @Param('inventarioId') inventarioId: string,
+  ): Promise<{ message: string }> {
+    await this.inventarioService.eliminarInventario({ inventarioId });
+    return { message: 'Inventario eliminado exitosamente' };
   }
 }

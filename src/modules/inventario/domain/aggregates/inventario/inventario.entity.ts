@@ -3,9 +3,11 @@ import { Version } from '../../value-objects/version';
 import { EstadoReservaEnum, TipoItemEnum, TipoMovimientoEnum } from './types';
 import { Reserva } from './reserva.entity';
 import { MovimientoInventario } from './movimiento-inventario.entity';
+import { InventarioCreado } from '../../events/inventario-creado.event';
 import { InventarioReservado } from '../../events/inventario-reservado.event';
 import { InventarioDescontado } from '../../events/inventario-descontado.event';
 import { InventarioAjustado } from '../../events/inventario-ajustado.event';
+import { ReservaExpirada } from '../../events/reserva-expirada.event';
 import { StockInsuficienteError, EstadoInvalidoError } from '../../exceptions';
 import { ReservaFactory } from '../../factories/reserva.factory';
 import { MovimientoInventarioFactory } from '../../factories/movimiento-inventario.factory';
@@ -20,9 +22,11 @@ import type {
  * Base para todos los eventos de dominio
  */
 type DomainEvent =
+  | InventarioCreado
   | InventarioReservado
   | InventarioDescontado
-  | InventarioAjustado;
+  | InventarioAjustado
+  | ReservaExpirada;
 
 /**
  * Agregado raíz de Inventario
@@ -87,9 +91,6 @@ export class Inventario {
 
   private constructor() {}
 
-  /**
-   * Factory method para reconstruir Inventario desde datos de persistencia
-   */
   static desde(data: InventarioData): Inventario {
     const inventario = new Inventario();
     inventario.#id = data.id;
@@ -105,13 +106,34 @@ export class Inventario {
     return inventario;
   }
 
+  static crear(id: string, props: CrearInventarioProps): Inventario {
+    const inventario = new Inventario();
+    inventario.#id = id;
+    inventario.#tipoItem = props.tipoItem;
+    inventario.#itemId = props.itemId;
+    inventario.#ubicacion = props.ubicacion;
+    inventario.#cantidadDisponible = Cantidad.crear(0);
+    inventario.#cantidadReservada = Cantidad.crear(0);
+    inventario.#cantidadAbandono = Cantidad.crear(0);
+    inventario.#version = Version.crear(1);
+    inventario.#fechaActualizacion = new Date();
+
+    inventario.addDomainEvent(
+      new InventarioCreado(id, props.tipoItem, props.itemId),
+    );
+
+    return inventario;
+  }
+
   /**
-   * Reserva inventario para una operación (venta o cambio)
+   * MovimientoInventario tipo RESERVA cumple invariante: todo cambio de cantidad debe auditarse.
    *
-   * @throws StockInsuficienteError si no hay stock disponible suficiente
-   * @returns Reserva creada con estado ACTIVA
+   * @throws StockInsuficienteError
    */
-  reservar(props: ReservarInventarioProps): Reserva {
+  reservar(props: ReservarInventarioProps): {
+    reserva: Reserva;
+    movimiento: MovimientoInventario;
+  } {
     const cantidadSolicitada = Cantidad.crear(props.cantidad);
 
     if (!this.cantidadDisponible.esMayorOIgualA(cantidadSolicitada)) {
@@ -120,6 +142,8 @@ export class Inventario {
         props.cantidad,
       );
     }
+
+    const cantidadDisponibleAnterior = this.#cantidadDisponible.obtenerValor();
 
     this.#cantidadDisponible =
       this.#cantidadDisponible.restar(cantidadSolicitada);
@@ -137,6 +161,16 @@ export class Inventario {
       minutosExpiracion: props.minutosExpiracion,
     });
 
+    const movimiento = MovimientoInventarioFactory.crear({
+      inventarioId: this.id,
+      tipoMovimiento: TipoMovimientoEnum.RESERVA,
+      cantidad: props.cantidad,
+      cantidadAnterior: cantidadDisponibleAnterior,
+      cantidadPosterior: this.#cantidadDisponible.obtenerValor(),
+      tipoOperacionOrigen: props.tipoOperacion,
+      operacionOrigenId: props.operacionId,
+    });
+
     this.addDomainEvent(
       new InventarioReservado(
         reserva.id,
@@ -146,22 +180,28 @@ export class Inventario {
       ),
     );
 
-    return reserva;
+    return { reserva, movimiento };
   }
 
   /**
-   * Consolida una reserva confirmando la venta/cambio
-   * Descuenta del inventario reservado sin devolver al disponible
+   * Validación antes de consolidar garantiza atomicidad, evitando estado inconsistente.
    *
-   * @throws EstadoInvalidoError si la reserva no está ACTIVA
-   * @returns MovimientoInventario de tipo VENTA_SALIDA
+   * @throws EstadoInvalidoError
    */
   consolidarReserva(reserva: Reserva): MovimientoInventario {
+    if (reserva.estaExpirada()) {
+      throw new EstadoInvalidoError(
+        'No se puede consolidar una reserva expirada',
+      );
+    }
+
     if (reserva.estado !== EstadoReservaEnum.ACTIVA) {
       throw new EstadoInvalidoError(
         'Solo se pueden consolidar reservas activas',
       );
     }
+
+    reserva.consolidar();
 
     const cantidadReservada = Cantidad.crear(reserva.cantidad);
     const cantidadAnterior = this.#cantidadReservada.obtenerValor();
@@ -188,16 +228,14 @@ export class Inventario {
   }
 
   /**
-   * Libera una reserva devolviendo inventario a disponible
-   * Usado cuando una venta/cambio se cancela antes de completarse
-   *
-   * @throws EstadoInvalidoError si la reserva no está ACTIVA
-   * @returns MovimientoInventario de tipo LIBERACION
+   * @throws EstadoInvalidoError
    */
   liberarReserva(reserva: Reserva): MovimientoInventario {
     if (reserva.estado !== EstadoReservaEnum.ACTIVA) {
       throw new EstadoInvalidoError('Solo se pueden liberar reservas activas');
     }
+
+    reserva.liberar();
 
     const cantidadReservada = Cantidad.crear(reserva.cantidad);
     const cantidadAnterior = this.#cantidadReservada.obtenerValor();
@@ -222,12 +260,44 @@ export class Inventario {
   }
 
   /**
-   * Ajusta manualmente el inventario disponible (+ para entradas, - para salidas)
-   * Usado para correcciones, recepción de mercadería, pérdidas, etc.
-   *
-   * @param props.cantidad - Positivo: entrada | Negativo: salida
-   * @throws StockInsuficienteError si se intenta restar más de lo disponible
-   * @returns MovimientoInventario de tipo AJUSTE_OPERATIVO
+   * @throws EstadoInvalidoError
+   */
+  expirarReserva(reserva: Reserva): MovimientoInventario {
+    if (reserva.estado !== EstadoReservaEnum.ACTIVA) {
+      throw new EstadoInvalidoError('Solo se pueden expirar reservas activas');
+    }
+
+    reserva.expirar();
+
+    const cantidadReservada = Cantidad.crear(reserva.cantidad);
+    const cantidadAnterior = this.#cantidadReservada.obtenerValor();
+
+    this.#cantidadDisponible =
+      this.#cantidadDisponible.sumar(cantidadReservada);
+    this.#cantidadReservada = this.#cantidadReservada.restar(cantidadReservada);
+    this.#version = this.#version.incrementar();
+    this.#fechaActualizacion = new Date();
+
+    const movimiento = MovimientoInventarioFactory.crear({
+      inventarioId: this.id,
+      tipoMovimiento: TipoMovimientoEnum.LIBERACION,
+      cantidad: reserva.cantidad,
+      cantidadAnterior,
+      cantidadPosterior: this.#cantidadReservada.obtenerValor(),
+      tipoOperacionOrigen: reserva.tipoOperacion,
+      operacionOrigenId: reserva.operacionId,
+    });
+
+    this.addDomainEvent(
+      new ReservaExpirada(reserva.id, this.id, reserva.cantidad),
+    );
+
+    return movimiento;
+  }
+
+  /**
+   * @param props.cantidad Positivo: entrada | Negativo: salida
+   * @throws StockInsuficienteError
    */
   ajustar(props: AjustarInventarioProps): MovimientoInventario {
     const cantidadAjuste = Cantidad.crear(Math.abs(props.cantidad));

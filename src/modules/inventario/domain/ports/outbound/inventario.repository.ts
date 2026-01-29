@@ -6,8 +6,7 @@ import { INVENTARIO_REPOSITORY_TOKEN } from '../tokens';
 export { INVENTARIO_REPOSITORY_TOKEN };
 
 /**
- * Replaces callback pattern with declarative options.
- * All specified entities persist within a single database transaction.
+ * Declarative options ensure all entities persist atomically in single transaction.
  */
 export interface GuardarInventarioOptions {
   reservas?: {
@@ -17,19 +16,11 @@ export interface GuardarInventarioOptions {
   movimientos?: MovimientoInventario[];
 }
 
-/**
- * Enforces DDD principle: one aggregate = one repository.
- * Internal entities must NOT be persisted outside this repository.
- */
 export interface InventarioRepository {
   /**
-   * Uses version-based optimistic locking to prevent lost updates
-   * when multiple processes modify the same inventory simultaneously.
+   * Version-based optimistic locking prevents lost updates when multiple processes modify simultaneously.
    *
-   * All operations execute atomically within a single transaction;
-   * if any fails, everything rolls back to prevent partial state.
-   *
-   * @throws {OptimisticLockingError} When version mismatch detected
+   * @throws OptimisticLockingError
    */
   guardar(
     inventario: Inventario,
@@ -39,12 +30,12 @@ export interface InventarioRepository {
   buscarPorId(id: string): Promise<Inventario | null>;
   buscarPorItem(tipoItem: string, itemId: string): Promise<Inventario | null>;
   buscarTodos(): Promise<Inventario[]>;
+  buscarInventariosBajoUmbral(umbral: number): Promise<Inventario[]>;
 
   buscarReservasActivas(operacionId: string): Promise<Reserva[]>;
 
   /**
-   * Queries only ACTIVA state to avoid re-processing reservations
-   * already handled by previous job executions.
+   * ACTIVA filter avoids re-processing reservations already handled by previous job runs.
    */
   buscarReservasExpiradas(): Promise<Reserva[]>;
 

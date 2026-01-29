@@ -1,4 +1,4 @@
-export class InventarioResponseDto {
+export interface InventarioResponseDto {
   id: string;
   tipoItem: string;
   itemId: string;

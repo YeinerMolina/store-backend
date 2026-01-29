@@ -11,10 +11,6 @@ import { PrismaInventarioMapper } from '../mappers/prisma-inventario.mapper';
 import { PrismaService } from '../../../../../shared/database/prisma.service';
 import { OptimisticLockingError } from '../../../domain/exceptions';
 
-/**
- * Enforces DDD principle: one aggregate = one repository.
- * Declarative options replace callback pattern for cleaner API.
- */
 @Injectable()
 export class InventarioPostgresRepository implements InventarioRepository {
   constructor(private readonly prismaService: PrismaService) {}
@@ -133,6 +129,18 @@ export class InventarioPostgresRepository implements InventarioRepository {
   async buscarTodos(): Promise<Inventario[]> {
     const prisma = this.prismaService.prisma;
     const datos = await prisma.inventario.findMany();
+    return datos.map((data) => Inventario.desde(data));
+  }
+
+  async buscarInventariosBajoUmbral(umbral: number): Promise<Inventario[]> {
+    const prisma = this.prismaService.prisma;
+    const datos = await prisma.inventario.findMany({
+      where: {
+        cantidadDisponible: {
+          lt: umbral,
+        },
+      },
+    });
     return datos.map((data) => Inventario.desde(data));
   }
 

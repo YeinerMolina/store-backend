@@ -1,4 +1,3 @@
-export class ConsolidarReservaRequestDto {
-  reservaId: string;
+export interface ConsolidarReservaRequestDto {
   operacionId: string;
 }

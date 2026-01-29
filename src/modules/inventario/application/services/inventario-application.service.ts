@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { EntidadNoEncontradaError } from '../../domain/exceptions';
+import {
+  EntidadNoEncontradaError,
+  EntidadDuplicadaError,
+} from '../../domain/exceptions';
 import type { InventarioRepository } from '../../domain/ports/outbound/inventario.repository';
 import type { EventBusPort } from '../../domain/ports/outbound/event-bus.port';
 import {
@@ -8,6 +11,7 @@ import {
   TipoOperacionEnum,
 } from '../../domain/aggregates/inventario/types';
 import { InventarioService } from '../../domain/ports/inbound/inventario.service';
+import { CrearInventarioRequestDto } from '../dto/crear-inventario-request.dto';
 import { ReservarInventarioRequestDto } from '../dto/reservar-inventario-request.dto';
 import { ConsolidarReservaRequestDto } from '../dto/consolidar-reserva-request.dto';
 import { AjustarInventarioRequestDto } from '../dto/ajustar-inventario-request.dto';
@@ -31,20 +35,72 @@ export class InventarioApplicationService implements InventarioService {
     private readonly eventBus: EventBusPort,
   ) {}
 
+  /**
+   * Crea en 0 para forzar primer movimiento auditado, evitando stock sin origen.
+   */
+  async crearInventario(
+    request: CrearInventarioRequestDto,
+  ): Promise<InventarioResponseDto> {
+    const existente = await this.inventarioRepo.buscarPorItem(
+      request.tipoItem,
+      request.itemId,
+    );
+
+    if (existente) {
+      throw new EntidadDuplicadaError(
+        'Inventario',
+        `${request.tipoItem}/${request.itemId}`,
+      );
+    }
+
+    if (request.cantidadInicial < 0) {
+      throw new Error('Cantidad inicial no puede ser negativa');
+    }
+
+    const inventario = InventarioFactory.crear({
+      tipoItem: request.tipoItem as TipoItemEnum,
+      itemId: request.itemId,
+      ubicacion: request.ubicacion,
+    });
+
+    let movimiento;
+    if (request.cantidadInicial > 0) {
+      movimiento = inventario.ajustar({
+        cantidad: request.cantidadInicial,
+        empleadoId: request.empleadoId,
+        intencion: 'ENTRADA_INICIAL',
+        notas: request.notas,
+      });
+    }
+
+    await this.inventarioRepo.guardar(inventario, {
+      movimientos: movimiento ? [movimiento] : undefined,
+    });
+
+    for (const evento of inventario.domainEvents) {
+      await this.eventBus.publicar(evento);
+    }
+    inventario.clearDomainEvents();
+
+    return InventarioMapper.toResponse(inventario);
+  }
+
+  /**
+   * Stock fantasma (ventas sin mercadería) requiere que inventario exista antes de reservar.
+   */
   async reservarInventario(
     request: ReservarInventarioRequestDto,
   ): Promise<ReservaResponseDto> {
-    let inventario = await this.inventarioRepo.buscarPorItem(
+    const inventario = await this.inventarioRepo.buscarPorItem(
       request.tipoItem,
       request.itemId,
     );
 
     if (!inventario) {
-      inventario = InventarioFactory.crear({
-        tipoItem: request.tipoItem as TipoItemEnum,
-        itemId: request.itemId,
-      });
-      await this.inventarioRepo.guardar(inventario);
+      throw new EntidadNoEncontradaError(
+        'Inventario',
+        `${request.tipoItem}/${request.itemId}`,
+      );
     }
 
     const duracionMinutos =
@@ -52,7 +108,7 @@ export class InventarioApplicationService implements InventarioService {
         ? this.DURACION_RESERVA_CAMBIO_MINUTOS
         : this.DURACION_RESERVA_VENTA_MINUTOS;
 
-    const reserva = inventario.reservar({
+    const { reserva, movimiento } = inventario.reservar({
       cantidad: request.cantidad,
       operacionId: request.operacionId,
       tipoOperacion: request.tipoOperacion as TipoOperacionEnum,
@@ -63,6 +119,7 @@ export class InventarioApplicationService implements InventarioService {
 
     await this.inventarioRepo.guardar(inventario, {
       reservas: { nuevas: [reserva] },
+      movimientos: [movimiento],
     });
 
     for (const evento of inventario.domainEvents) {
@@ -73,6 +130,9 @@ export class InventarioApplicationService implements InventarioService {
     return ReservaMapper.toResponse(reserva);
   }
 
+  /**
+   * Delegación al agregado garantiza atomicidad entre validación y cambio de estado.
+   */
   async consolidarReserva(request: ConsolidarReservaRequestDto): Promise<void> {
     const reservas = await this.inventarioRepo.buscarReservasActivas(
       request.operacionId,
@@ -90,7 +150,6 @@ export class InventarioApplicationService implements InventarioService {
         throw new EntidadNoEncontradaError('Inventario', reserva.inventarioId);
       }
 
-      reserva.consolidar();
       const movimiento = inventario.consolidarReserva(reserva);
 
       await this.inventarioRepo.guardar(inventario, {
@@ -118,8 +177,7 @@ export class InventarioApplicationService implements InventarioService {
         continue;
       }
 
-      reserva.expirar();
-      const movimiento = inventario.liberarReserva(reserva);
+      const movimiento = inventario.expirarReserva(reserva);
 
       await this.inventarioRepo.guardar(inventario, {
         reservas: { actualizadas: [reserva] },
@@ -205,17 +263,16 @@ export class InventarioApplicationService implements InventarioService {
   }
 
   async detectarStockBajo(umbral: number): Promise<void> {
-    const inventarios = await this.inventarioRepo.buscarTodos();
+    const inventarios =
+      await this.inventarioRepo.buscarInventariosBajoUmbral(umbral);
 
     for (const inventario of inventarios) {
-      if (inventario.estaBajoUmbral(umbral)) {
-        const evento = new StockBajoDetectado(
-          inventario.id,
-          inventario.cantidadDisponible.obtenerValor(),
-          umbral,
-        );
-        await this.eventBus.publicar(evento);
-      }
+      const evento = new StockBajoDetectado(
+        inventario.id,
+        inventario.cantidadDisponible.obtenerValor(),
+        umbral,
+      );
+      await this.eventBus.publicar(evento);
     }
   }
 }

@@ -1,4 +1,4 @@
-export class ReservaResponseDto {
+export interface ReservaResponseDto {
   id: string;
   inventarioId: string;
   tipoOperacion: string;

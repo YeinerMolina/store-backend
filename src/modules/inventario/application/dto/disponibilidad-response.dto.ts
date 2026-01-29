@@ -1,4 +1,4 @@
-export class DisponibilidadResponseDto {
+export interface DisponibilidadResponseDto {
   disponible: boolean;
   cantidadDisponible: number;
   cantidadSolicitada: number;

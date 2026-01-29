@@ -1,4 +1,4 @@
-export class ReservarInventarioRequestDto {
+export interface ReservarInventarioRequestDto {
   tipoItem: string;
   itemId: string;
   cantidad: number;

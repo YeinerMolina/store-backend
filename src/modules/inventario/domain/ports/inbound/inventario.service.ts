@@ -1,6 +1,7 @@
 import type { ReservarInventarioRequestDto } from '../../../application/dto/reservar-inventario-request.dto';
 import type { ConsolidarReservaRequestDto } from '../../../application/dto/consolidar-reserva-request.dto';
 import type { AjustarInventarioRequestDto } from '../../../application/dto/ajustar-inventario-request.dto';
+import type { CrearInventarioRequestDto } from '../../../application/dto/crear-inventario-request.dto';
 import type { ConsultarDisponibilidadRequestDto } from '../../../application/dto/consultar-disponibilidad-request.dto';
 import type { ReservaResponseDto } from '../../../application/dto/reserva-response.dto';
 import type { DisponibilidadResponseDto } from '../../../application/dto/disponibilidad-response.dto';
@@ -9,27 +10,36 @@ import { INVENTARIO_SERVICE_TOKEN } from '../tokens';
 
 export { INVENTARIO_SERVICE_TOKEN };
 
-/**
- * Puerto Inbound: Define los casos de uso del módulo INVENTARIO.
- * Implementado por InventarioApplicationService.
- */
 export interface InventarioService {
   /**
-   * @throws StockInsuficienteError, OptimisticLockingError
+   * @throws EntidadDuplicadaError
+   * @throws PermisoInsuficienteError
+   */
+  crearInventario(
+    request: CrearInventarioRequestDto,
+  ): Promise<InventarioResponseDto>;
+
+  /**
+   * @throws EntidadNoEncontradaError
+   * @throws StockInsuficienteError
+   * @throws OptimisticLockingError
    */
   reservarInventario(
     request: ReservarInventarioRequestDto,
   ): Promise<ReservaResponseDto>;
 
   /**
-   * @throws EntidadNoEncontradaError, EstadoInvalidoError
+   * @throws EntidadNoEncontradaError
+   * @throws EstadoInvalidoError
    */
   consolidarReserva(request: ConsolidarReservaRequestDto): Promise<void>;
 
   liberarReservasExpiradas(): Promise<void>;
 
   /**
-   * @throws EntidadNoEncontradaError, PermisoInsuficienteError
+   * @throws EntidadNoEncontradaError
+   * @throws PermisoInsuficienteError
+   * @throws StockInsuficienteError
    */
   ajustarInventario(request: AjustarInventarioRequestDto): Promise<void>;
 

@@ -1,4 +1,4 @@
-export class AjustarInventarioRequestDto {
+export interface AjustarInventarioRequestDto {
   inventarioId: string;
   cantidad: number;
   empleadoId: string;

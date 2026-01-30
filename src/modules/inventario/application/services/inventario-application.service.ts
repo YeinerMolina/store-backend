@@ -1,16 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import {
   EntidadNoEncontradaError,
   EntidadDuplicadaError,
 } from '../../domain/exceptions';
 import type { InventarioRepository } from '../../domain/ports/outbound/inventario.repository';
 import type { EventBusPort } from '../../domain/ports/outbound/event-bus.port';
+import type {
+  TransactionManager,
+  TransactionContext,
+} from '../../domain/ports/outbound/transaction-manager.port';
 import {
   TipoActorEnum,
   TipoItemEnum,
   TipoOperacionEnum,
 } from '../../domain/aggregates/inventario/types';
-import { InventarioService } from '../../domain/ports/inbound/inventario.service';
+import type { InventarioService } from '../../domain/ports/inbound/inventario.service';
 import { CrearInventarioRequestDto } from '../dto/crear-inventario-request.dto';
 import { ReservarInventarioRequestDto } from '../dto/reservar-inventario-request.dto';
 import { ConsolidarReservaRequestDto } from '../dto/consolidar-reserva-request.dto';
@@ -24,17 +28,36 @@ import { InventarioMapper } from '../mappers/inventario.mapper';
 import { ReservaMapper } from '../mappers/reserva.mapper';
 import { StockBajoDetectado } from '../../domain/events/stock-bajo-detectado.event';
 import { InventarioFactory } from '../../domain/factories';
-import { MovimientoInventario } from '@inventario/domain/aggregates/inventario';
+import {
+  Inventario,
+  MovimientoInventario,
+  Reserva,
+} from '@inventario/domain/aggregates/inventario';
+import type { ProcesarReservaParams } from '../types/procesar-reserva.types';
+import {
+  INVENTARIO_REPOSITORY_TOKEN,
+  EVENT_BUS_PORT_TOKEN,
+  TRANSACTION_MANAGER_TOKEN,
+} from '../../domain/ports/tokens';
 
 @Injectable()
 export class InventarioApplicationService implements InventarioService {
   private readonly DURACION_RESERVA_VENTA_MINUTOS = 20;
   private readonly DURACION_RESERVA_CAMBIO_MINUTOS = 20;
   private readonly UMBRAL_STOCK_BAJO = 10;
+  private readonly DURACION_RESERVA = {
+    [TipoOperacionEnum.CAMBIO]: this.DURACION_RESERVA_CAMBIO_MINUTOS,
+    [TipoOperacionEnum.VENTA]: this.DURACION_RESERVA_VENTA_MINUTOS,
+    [TipoOperacionEnum.AJUSTE]: 0,
+  } as const;
 
   constructor(
+    @Inject(INVENTARIO_REPOSITORY_TOKEN)
     private readonly inventarioRepo: InventarioRepository,
+    @Inject(EVENT_BUS_PORT_TOKEN)
     private readonly eventBus: EventBusPort,
+    @Inject(TRANSACTION_MANAGER_TOKEN)
+    private readonly transactionManager: TransactionManager,
   ) {}
 
   /**
@@ -79,10 +102,7 @@ export class InventarioApplicationService implements InventarioService {
       movimientos: movimiento ? [movimiento] : undefined,
     });
 
-    for (const evento of inventario.domainEvents) {
-      await this.eventBus.publicar(evento);
-    }
-    inventario.clearDomainEvents();
+    await this.publicarEventosDominio(inventario);
 
     return InventarioMapper.toResponse(inventario);
   }
@@ -105,16 +125,13 @@ export class InventarioApplicationService implements InventarioService {
       );
     }
 
-    const duracionMinutos =
-      request.tipoOperacion === TipoOperacionEnum.CAMBIO
-        ? this.DURACION_RESERVA_CAMBIO_MINUTOS
-        : this.DURACION_RESERVA_VENTA_MINUTOS;
+    const duracionMinutos = this.DURACION_RESERVA[request.tipoOperacion];
 
     const { reserva, movimiento } = inventario.reservar({
       cantidad: request.cantidad,
       operacionId: request.operacionId,
-      tipoOperacion: request.tipoOperacion as TipoOperacionEnum,
-      actorTipo: request.actorTipo as TipoActorEnum,
+      tipoOperacion: request.tipoOperacion,
+      actorTipo: request.actorTipo,
       actorId: request.actorId,
       minutosExpiracion: duracionMinutos,
     });
@@ -124,72 +141,72 @@ export class InventarioApplicationService implements InventarioService {
       movimientos: [movimiento],
     });
 
-    for (const evento of inventario.domainEvents) {
-      await this.eventBus.publicar(evento);
-    }
-    inventario.clearDomainEvents();
+    await this.publicarEventosDominio(inventario);
 
     return ReservaMapper.toResponse(reserva);
   }
 
   /**
-   * Delegación al agregado garantiza atomicidad entre validación y cambio de estado.
+   * Consolidates all active reservations for an operation atomically.
+   * Uses explicit transaction to ensure all-or-nothing semantics across multiple
+   * inventory aggregates. Events are published after successful commit to prevent
+   * inconsistency if transaction rolls back.
    */
   async consolidarReserva(request: ConsolidarReservaRequestDto): Promise<void> {
-    const reservas = await this.inventarioRepo.buscarReservasActivas(
-      request.operacionId,
-    );
+    const inventarios: Inventario[] = [];
 
-    if (reservas.length === 0) {
-      throw new EntidadNoEncontradaError('Reserva', request.operacionId);
-    }
-
-    for (const reserva of reservas) {
-      const inventario = await this.inventarioRepo.buscarPorId(
-        reserva.inventarioId,
+    await this.transactionManager.transaction(async (ctx) => {
+      const reservas = await this.inventarioRepo.buscarReservasActivas(
+        request.operacionId,
+        ctx,
       );
-      if (!inventario) {
-        throw new EntidadNoEncontradaError('Inventario', reserva.inventarioId);
+
+      if (!reservas.length) {
+        throw new EntidadNoEncontradaError('Reserva', request.operacionId);
       }
 
-      const movimiento = inventario.consolidarReserva(reserva);
+      for (const reserva of reservas) {
+        const inventario = await this.procesarReserva({
+          reserva,
+          operacion: (inv, res) => ({
+            inventario: inv,
+            movimiento: inv.consolidarReserva(res),
+          }),
+          transactionContext: ctx,
+        });
 
-      await this.inventarioRepo.guardar(inventario, {
-        reservas: { actualizadas: [reserva] },
-        movimientos: [movimiento],
-      });
-
-      for (const evento of inventario.domainEvents) {
-        await this.eventBus.publicar(evento);
+        inventarios.push(inventario);
       }
-      inventario.clearDomainEvents();
+    });
+
+    for (const inventario of inventarios) {
+      await this.publicarEventosDominio(inventario);
     }
   }
 
+  /**
+   * Processes expired reservations independently (no shared transaction).
+   * Each reservation gets isolated transaction for resilience: if one fails,
+   * others continue. Events published immediately after each successful commit.
+   */
   async liberarReservasExpiradas(): Promise<void> {
     const reservasExpiradas =
       await this.inventarioRepo.buscarReservasExpiradas();
 
     for (const reserva of reservasExpiradas) {
-      const inventario = await this.inventarioRepo.buscarPorId(
-        reserva.inventarioId,
-      );
+      try {
+        const inventario = await this.procesarReserva({
+          reserva,
+          operacion: (inv, res) => ({
+            inventario: inv,
+            movimiento: inv.expirarReserva(res),
+          }),
+        });
 
-      if (!inventario) {
-        continue;
+        await this.publicarEventosDominio(inventario);
+      } catch (error) {
+        console.error(`Error expirando reserva ${reserva.id}:`, error);
       }
-
-      const movimiento = inventario.expirarReserva(reserva);
-
-      await this.inventarioRepo.guardar(inventario, {
-        reservas: { actualizadas: [reserva] },
-        movimientos: [movimiento],
-      });
-
-      for (const evento of inventario.domainEvents) {
-        await this.eventBus.publicar(evento);
-      }
-      inventario.clearDomainEvents();
     }
   }
 
@@ -213,10 +230,7 @@ export class InventarioApplicationService implements InventarioService {
       movimientos: [movimiento],
     });
 
-    for (const evento of inventario.domainEvents) {
-      await this.eventBus.publicar(evento);
-    }
-    inventario.clearDomainEvents();
+    await this.publicarEventosDominio(inventario);
   }
 
   async consultarDisponibilidad(
@@ -279,7 +293,6 @@ export class InventarioApplicationService implements InventarioService {
   }
 
   /**
-   * Allows deletion only if inventory has no live reservations or meaningful movements.
    * Ignores ENTRADA_INICIAL because it's an automatic initialization movement created
    * when inventory is first setup—not a business operation. This allows users to delete
    * freshly created inventories without being blocked by their own initialization record.
@@ -309,15 +322,55 @@ export class InventarioApplicationService implements InventarioService {
     );
     const tieneMovimientos = movimientosSignificativos.length > 0;
 
-    // TODO: Verificar si hay items asociados cuando CATALOGO esté disponible
     const tieneItems = false;
 
     inventario.eliminar(tieneReservas, tieneMovimientos, tieneItems);
     await this.inventarioRepo.eliminar(inventario);
 
+    await this.publicarEventosDominio(inventario);
+  }
+
+  /**
+   * Publica eventos de dominio pendientes y limpia la cola del agregado.
+   * Debe ejecutarse DESPUÉS de persistir cambios para garantizar consistencia eventual.
+   */
+  private async publicarEventosDominio(inventario: Inventario): Promise<void> {
     for (const evento of inventario.domainEvents) {
       await this.eventBus.publicar(evento);
     }
     inventario.clearDomainEvents();
+  }
+
+  /**
+   * Processes a single reservation by executing domain operation and persisting changes.
+   * Returns modified inventory to allow event capture before publishing (caller responsibility).
+   * Transaction context propagation enables atomic multi-reservation operations.
+   */
+  private async procesarReserva(
+    params: ProcesarReservaParams,
+  ): Promise<Inventario> {
+    const { reserva, operacion, transactionContext } = params;
+
+    const inventario = await this.inventarioRepo.buscarPorId(
+      reserva.inventarioId,
+      transactionContext,
+    );
+
+    if (!inventario) {
+      throw new EntidadNoEncontradaError('Inventario', reserva.inventarioId);
+    }
+
+    const { inventario: inventarioModificado, movimiento } = operacion(
+      inventario,
+      reserva,
+    );
+
+    await this.inventarioRepo.guardar(inventarioModificado, {
+      reservas: { actualizadas: [reserva] },
+      movimientos: [movimiento],
+      transactionContext,
+    });
+
+    return inventarioModificado;
   }
 }

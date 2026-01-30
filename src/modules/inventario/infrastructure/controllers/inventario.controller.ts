@@ -11,6 +11,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { ValidateWith } from '../../../../shared/decorators/validate-with.decorator';
 import type { InventarioService } from '../../domain/ports/inbound/inventario.service';
 import { INVENTARIO_SERVICE_TOKEN } from '../../domain/ports/tokens';
@@ -29,8 +30,18 @@ import {
 import type { ReservaResponseDto } from '../../application/dto/reserva-response.dto';
 import type { DisponibilidadResponseDto } from '../../application/dto/disponibilidad-response.dto';
 import type { InventarioResponseDto } from '../../application/dto/inventario-response.dto';
+import {
+  ApiCrearInventario,
+  ApiReservarInventario,
+  ApiConsolidarReserva,
+  ApiAjustarInventario,
+  ApiConsultarDisponibilidad,
+  ApiObtenerInventarioPorItem,
+  ApiEliminarInventario,
+} from '../../docs/decorators/api-inventario.decorator.js';
 
 @Controller('inventario')
+@ApiTags('Inventario')
 export class InventarioController {
   constructor(
     @Inject(INVENTARIO_SERVICE_TOKEN)
@@ -38,6 +49,7 @@ export class InventarioController {
   ) {}
 
   @Post()
+  @ApiCrearInventario()
   @ValidateWith(CrearInventarioSchema)
   @HttpCode(HttpStatus.CREATED)
   async crearInventario(
@@ -47,6 +59,7 @@ export class InventarioController {
   }
 
   @Post('reservar')
+  @ApiReservarInventario()
   @ValidateWith(ReservarInventarioSchema)
   @HttpCode(HttpStatus.CREATED)
   async reservarInventario(
@@ -56,6 +69,7 @@ export class InventarioController {
   }
 
   @Patch('consolidar')
+  @ApiConsolidarReserva()
   @ValidateWith(ConsolidarReservaSchema)
   @HttpCode(HttpStatus.OK)
   async consolidarReserva(
@@ -66,6 +80,7 @@ export class InventarioController {
   }
 
   @Patch('ajustar')
+  @ApiAjustarInventario()
   @ValidateWith(AjustarInventarioSchema)
   @HttpCode(HttpStatus.OK)
   async ajustarInventario(
@@ -76,6 +91,7 @@ export class InventarioController {
   }
 
   @Get('disponibilidad')
+  @ApiConsultarDisponibilidad()
   @ValidateWith(ConsultarDisponibilidadSchema)
   async consultarDisponibilidad(
     @Query() query: ConsultarDisponibilidadDto,
@@ -84,6 +100,7 @@ export class InventarioController {
   }
 
   @Get('item/:tipoItem/:itemId')
+  @ApiObtenerInventarioPorItem()
   async obtenerInventarioPorItem(
     @Param('tipoItem') tipoItem: string,
     @Param('itemId') itemId: string,
@@ -95,6 +112,7 @@ export class InventarioController {
   }
 
   @Delete(':inventarioId')
+  @ApiEliminarInventario()
   @HttpCode(HttpStatus.OK)
   async eliminarInventario(
     @Param('inventarioId') inventarioId: string,

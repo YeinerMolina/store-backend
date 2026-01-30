@@ -574,12 +574,13 @@ Convenciones de nombres para puertos y adaptadores:
 
 ### 2. **Explorar el Módulo de Ejemplo**
 
-El módulo `COMERCIAL` está completamente implementado como referencia:
+El módulo `INVENTARIO` está completamente implementado como referencia:
 
-- `src/modules/comercial/domain/` - Agregados, puertos, eventos
-- `src/modules/comercial/application/` - Servicios, DTOs
-- `src/modules/comercial/infrastructure/` - Adaptadores, controllers
-- `src/modules/comercial/README.md` - Documentación específica
+- `src/modules/inventario/domain/` - Agregados, puertos, eventos
+- `src/modules/inventario/application/` - Servicios, DTOs, schemas Zod
+- `src/modules/inventario/infrastructure/` - Adaptadores, controllers, repositorios
+- `src/modules/inventario/docs/` - Decoradores Swagger, ejemplos HTTP
+- `src/modules/inventario/INVENTARIO_CLAUDE.md` - Documentación del dominio
 
 ### 3. **Implementar Módulos Fundamentales**
 
@@ -641,12 +642,38 @@ npx prisma generate
 - RabbitMQ para eventos persistentes (opcional)
 - Implementar adaptadores en `infrastructure/adapters/event-bus.adapter.ts`
 
+### 7. **Documentar Endpoints con Swagger**
+
+Cada módulo debe documentar sus endpoints HTTP siguiendo el patrón establecido:
+
+```bash
+# Ver guía completa
+cat docs/patrones/SWAGGER_INTEGRATION_GUIDE.md
+
+# Revisar implementación de referencia (INVENTARIO)
+cat src/modules/inventario/docs/decorators/api-inventario.decorator.ts
+```
+
+**Patrón de documentación**:
+
+- Ejemplos en `/docs/examples`
+- Decoradores de error en `/docs/decorators/api-error-responses.decorator.ts`
+- Decoradores de endpoint en `/docs/decorators/api-{modulo}.decorator.ts`
+- Aplicar decoradores en controllers
+
+**Acceso a Swagger UI** (solo desarrollo):
+
+```
+http://localhost:3000/api/docs
+```
+
 ---
 
 ## Referencias Internas
 
 - **Diseño de Persistencia Completo**: `docs/persistencia/diseno_persistencia_backend_v2.md`
 - **Diagrama de Base de Datos**: `tienda_retail_dbdiagram_v2.md`
+- **Guía de Integración Swagger**: `docs/patrones/SWAGGER_INTEGRATION_GUIDE.md`
 
 ---
 

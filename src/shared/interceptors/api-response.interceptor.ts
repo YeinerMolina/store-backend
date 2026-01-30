@@ -4,13 +4,13 @@ import {
   ExecutionContext,
   CallHandler,
 } from '@nestjs/common';
-import { Observable } from 'rxjs';
+import type { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { ApiResponse } from '../interfaces/api-response.interface';
+import type { ApiResponse } from '../interfaces/api-response.interface';
 
 /**
- * Interceptor global que envuelve todas las respuestas exitosas
- * en la estructura estándar ApiResponse
+ * Envuelve respuestas exitosas en formato ApiResponse para consistencia.
+ * Los errores son manejados por HttpExceptionFilter, no por este interceptor.
  */
 @Injectable()
 export class ApiResponseInterceptor<T> implements NestInterceptor<
@@ -21,15 +21,17 @@ export class ApiResponseInterceptor<T> implements NestInterceptor<
     context: ExecutionContext,
     next: CallHandler,
   ): Observable<ApiResponse<T>> {
-    const response = context.switchToHttp().getResponse();
-
     return next.handle().pipe(
-      map((data) => ({
-        ok: true,
-        status: response.statusCode,
-        data,
-        errors: [],
-      })),
+      map((data) => {
+        const response = context.switchToHttp().getResponse();
+
+        return {
+          ok: true,
+          status: response.statusCode,
+          data,
+          errors: [],
+        };
+      }),
     );
   }
 }

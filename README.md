@@ -159,6 +159,25 @@ npx prisma studio          # UI para explorar BD
 
 ---
 
+## 📚 Documentación API (Swagger)
+
+En **desarrollo**, la documentación interactiva está disponible en:
+
+```
+http://localhost:3000/api/docs
+```
+
+**Características**:
+
+- Documentación automática de todos los endpoints
+- Pruebas interactivas ("Try it out")
+- Ejemplos de request/response con datos del dominio
+- Errores HTTP documentados
+
+**Para documentar un módulo nuevo**, sigue la [Guía de Integración de Swagger](./docs/patrones/SWAGGER_INTEGRATION_GUIDE.md).
+
+---
+
 ## 🧪 Testing
 
 El proyecto sigue la pirámide de testing hexagonal:
@@ -210,7 +229,7 @@ it('POST /ventas debe crear venta', async () => {
 
 1. Lee **[QUICKSTART.md](./QUICKSTART.md)** (5 min)
 2. Lee **[ARQUITECTURA_HEXAGONAL.md](./docs/arquitectura/ARQUITECTURA_HEXAGONAL.md)** (20 min)
-3. Explora `src/modules/comercial/` como ejemplo
+3. Explora `src/modules/inventario/` como ejemplo completo implementado
 4. Consulta **[ARQUITECTURA_DIAGRAMA.md](./docs/arquitectura/ARQUITECTURA_DIAGRAMA.md)** para visualizaciones
 
 ### Para Implementar un Módulo Nuevo
@@ -219,6 +238,7 @@ it('POST /ventas debe crear venta', async () => {
 2. Lee `{MODULO}_ENTITIES_CLAUDE.md` (entidades)
 3. La estructura ya está creada (domain, application, infrastructure)
 4. Sigue el orden: agregados → puertos → servicios → adaptadores
+5. Documenta endpoints con Swagger (ver [guía de integración](./docs/patrones/SWAGGER_INTEGRATION_GUIDE.md))
 
 ### Reglas de Dependencia
 
@@ -287,7 +307,8 @@ store-backend/
 │   └── patrones/                # 🔧 Patrones y convenciones técnicas
 │       ├── UUID_V7_GUIDE.md
 │       ├── PIPES_VALIDACION.md
-│       └── VALIDACION_SCHEMAS.md
+│       ├── VALIDACION_SCHEMAS.md
+│       └── SWAGGER_INTEGRATION_GUIDE.md
 └── README.md                    # Este archivo
 ```
 

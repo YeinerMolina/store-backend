@@ -5,6 +5,7 @@ import { InventarioPostgresRepository } from './persistence/repositories/inventa
 import { PrismaTransactionManager } from './persistence/prisma-transaction-manager';
 import { EventBusConsoleAdapter } from './adapters/event-bus-console.adapter';
 import { InventarioController } from './controllers/inventario.controller';
+import { InventarioJobsService } from './jobs/inventario-jobs.service';
 import {
   INVENTARIO_SERVICE_TOKEN,
   INVENTARIO_REPOSITORY_TOKEN,
@@ -22,6 +23,7 @@ import {
     InventarioPostgresRepository,
     PrismaTransactionManager,
     EventBusConsoleAdapter,
+    InventarioJobsService,
     {
       provide: INVENTARIO_REPOSITORY_TOKEN,
       useClass: InventarioPostgresRepository,

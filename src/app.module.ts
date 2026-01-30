@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
@@ -16,6 +17,7 @@ import { validateEnv } from '@shared/infrastructure/config';
       validate: validateEnv,
       envFilePath: '.env',
     }),
+    ScheduleModule.forRoot(),
     InventarioModule,
   ],
   controllers: [AppController],

@@ -8,6 +8,7 @@ import { InventarioReservado } from '../../events/inventario-reservado.event';
 import { InventarioDescontado } from '../../events/inventario-descontado.event';
 import { InventarioAjustado } from '../../events/inventario-ajustado.event';
 import { InventarioEliminado } from '../../events/inventario-eliminado.event';
+import { InventarioRestaurado } from '../../events/inventario-restaurado.event';
 import { ReservaExpirada } from '../../events/reserva-expirada.event';
 import {
   StockInsuficienteError,
@@ -396,6 +397,26 @@ export class Inventario {
 
     this.addDomainEvent(
       new InventarioEliminado(this.id, this.tipoItem, this.itemId),
+    );
+  }
+
+  /**
+   * Restores soft-deleted inventory.
+   * Only works if inventory is currently deleted.
+   */
+  restaurar(): void {
+    if (!this.#deleted) {
+      throw new EstadoInvalidoError(
+        'No se puede restaurar un inventario que no está eliminado',
+      );
+    }
+
+    this.#deleted = false;
+    this.#version = this.#version.incrementar();
+    this.#fechaActualizacion = new Date();
+
+    this.addDomainEvent(
+      new InventarioRestaurado(this.id, this.tipoItem, this.itemId),
     );
   }
 

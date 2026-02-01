@@ -227,6 +227,25 @@ export class InventarioPostgresRepository implements InventarioRepository {
       : null;
   }
 
+  /**
+   * Fetches ONLY soft-deleted inventories (deleted=true).
+   * Returns null if inventory doesn't exist OR is not deleted.
+   * Used exclusively for restoration operations to prevent restoring active records.
+   */
+  async buscarEliminadoPorId(
+    id: string,
+    ctx?: TransactionContext,
+  ): Promise<Inventario | null> {
+    const prismaCtx = ctx || this.prismaService;
+    const data = await prismaCtx.inventario.findUnique({
+      where: { id, deleted: true },
+    });
+
+    return data
+      ? Inventario.desde(PrismaInventarioMapper.toDomain(data))
+      : null;
+  }
+
   async buscarPorItem(
     tipoItem: string,
     itemId: string,
@@ -303,7 +322,6 @@ export class InventarioPostgresRepository implements InventarioRepository {
       },
     });
 
-    console.log(datos);
     return datos.map((data) => PrismaReservaMapper.toDomain(data));
   }
 

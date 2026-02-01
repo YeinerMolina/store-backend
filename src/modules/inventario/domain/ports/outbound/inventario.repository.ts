@@ -38,6 +38,17 @@ export interface InventarioRepository {
   ): Promise<void>;
 
   buscarPorId(id: string, ctx?: TransactionContext): Promise<Inventario | null>;
+
+  /**
+   * Busca SOLO inventarios eliminados (deleted=true).
+   * Si el inventario existe pero NO está eliminado, retorna null.
+   * Usado exclusivamente para operaciones de restauración.
+   */
+  buscarEliminadoPorId(
+    id: string,
+    ctx?: TransactionContext,
+  ): Promise<Inventario | null>;
+
   buscarPorItem(
     tipoItem: string,
     itemId: string,

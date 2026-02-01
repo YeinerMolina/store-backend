@@ -1,5 +1,4 @@
-export interface ConsultarDisponibilidadRequestDto {
-  tipoItem: string;
-  itemId: string;
-  cantidad: number;
-}
+export {
+  consultarDisponibilidadRequestSchema,
+  type ConsultarDisponibilidadRequestDto,
+} from './consultar-disponibilidad-request.schema';

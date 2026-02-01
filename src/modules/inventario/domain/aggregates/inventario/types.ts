@@ -33,3 +33,13 @@ export enum TipoActorEnum {
   CLIENTE = 'CLIENTE',
   SISTEMA = 'SISTEMA',
 }
+
+/**
+ * Parámetros operativos del módulo INVENTARIO obtenidos desde CONFIGURACION.
+ * Usados por el puerto ConfiguracionPort para consultas dinámicas.
+ */
+export enum ParametroConfiguracionInventario {
+  DURACION_RESERVA_VENTA = 'DURACION_RESERVA_VENTA',
+  DURACION_RESERVA_CAMBIO = 'DURACION_RESERVA_CAMBIO',
+  UMBRAL_STOCK_BAJO = 'UMBRAL_STOCK_BAJO',
+}

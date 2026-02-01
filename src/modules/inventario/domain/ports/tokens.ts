@@ -8,6 +8,12 @@ export const INVENTARIO_SERVICE_TOKEN = Symbol('INVENTARIO_SERVICE');
 export const INVENTARIO_REPOSITORY_TOKEN = Symbol('INVENTARIO_REPOSITORY');
 export const TRANSACTION_MANAGER_TOKEN = Symbol('TRANSACTION_MANAGER');
 
-export const EVENT_BUS_PORT_TOKEN = Symbol('EVENT_BUS_PORT');
+/**
+ * Re-export global EVENT_BUS_PORT_TOKEN from shared module.
+ * This ensures all modules use the same token for event bus injection.
+ */
+export { EVENT_BUS_PORT_TOKEN } from '@shared/infrastructure/event-bus/event-bus.module';
+
+export const CONFIGURACION_PORT_TOKEN = Symbol('CONFIGURACION_PORT');
 export const EMPLEADO_PORT_TOKEN = Symbol('EMPLEADO_PORT');
 export const PRODUCTO_PORT_TOKEN = Symbol('PRODUCTO_PORT');

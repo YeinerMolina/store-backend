@@ -59,3 +59,44 @@ export const CREAR_INVENTARIO_REQUEST_EXAMPLE = {
   ubicacion: 'Almacén A - Estante 3',
   notas: 'Stock inicial de producto nuevo',
 } as const;
+
+export const ERROR_EXAMPLES = {
+  VALIDATION_ERROR: {
+    statusCode: 400,
+    message: 'Validation failed',
+    errors: [
+      {
+        field: 'cantidad',
+        message: 'cantidad debe ser mayor a 0',
+      },
+      {
+        field: 'itemId',
+        message: 'itemId debe ser un UUID válido',
+      },
+    ],
+  },
+  NOT_FOUND: {
+    statusCode: 404,
+    message: 'Inventario no encontrado',
+    error: 'Not Found',
+  },
+  STOCK_INSUFICIENTE: {
+    statusCode: 409,
+    message: 'Stock insuficiente para completar la operación',
+    error: 'Conflict',
+    details: {
+      solicitado: 10,
+      disponible: 5,
+    },
+  },
+  OPTIMISTIC_LOCKING: {
+    statusCode: 409,
+    message: 'El inventario fue modificado por otro proceso',
+    error: 'Conflict',
+  },
+  ESTADO_INVALIDO: {
+    statusCode: 422,
+    message: 'No se puede restaurar un inventario que no está eliminado',
+    error: 'Unprocessable Entity',
+  },
+} as const;

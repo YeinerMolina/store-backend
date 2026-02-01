@@ -29,6 +29,14 @@ export const envSchema = z.object({
     .int({ error: 'PORT debe ser un número entero' })
     .positive({ error: 'PORT debe ser positivo' })
     .default(3000),
+
+  REDIS_HOST: z.string().default('localhost'),
+
+  REDIS_PORT: z.coerce.number().int().positive().default(6379),
+
+  REDIS_PASSWORD: z.string().optional(),
+
+  REDIS_DB: z.coerce.number().int().min(0).max(15).default(0),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

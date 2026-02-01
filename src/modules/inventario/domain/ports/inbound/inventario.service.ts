@@ -1,24 +1,34 @@
-import type { ReservarInventarioRequestDto } from '../../../application/dto/reservar-inventario-request.dto';
-import type { ConsolidarReservaRequestDto } from '../../../application/dto/consolidar-reserva-request.dto';
-import type { AjustarInventarioRequestDto } from '../../../application/dto/ajustar-inventario-request.dto';
-import type { CrearInventarioRequestDto } from '../../../application/dto/crear-inventario-request.dto';
-import type { ConsultarDisponibilidadRequestDto } from '../../../application/dto/consultar-disponibilidad-request.dto';
-import type { EliminarInventarioRequestDto } from '../../../application/dto/eliminar-inventario-request.dto';
-import type { ReservaResponseDto } from '../../../application/dto/reserva-response.dto';
-import type { DisponibilidadResponseDto } from '../../../application/dto/disponibilidad-response.dto';
-import type { InventarioResponseDto } from '../../../application/dto/inventario-response.dto';
+import type {
+  CrearInventarioConCantidadProps,
+  ReservarInventarioCommand,
+  ConsolidarReservaProps,
+  AjustarInventarioCommand,
+  ConsultarDisponibilidadProps,
+  EliminarInventarioProps,
+  InventarioResponse,
+  ReservaResponse,
+  DisponibilidadResponse,
+} from '../../aggregates/inventario/inventario.types';
 import { INVENTARIO_SERVICE_TOKEN } from '../tokens';
 
 export { INVENTARIO_SERVICE_TOKEN };
 
+/**
+ * Puerto inbound para el módulo INVENTARIO.
+ * Define casos de uso usando Commands/Props del dominio (no DTOs de application).
+ *
+ * Decisión arquitectónica: Este puerto usa tipos del DOMINIO, permitiendo que
+ * la lógica de negocio sea independiente de HTTP/GraphQL/gRPC. El Application Service
+ * mapea DTOs → Commands del dominio antes de llamar estos métodos.
+ */
 export interface InventarioService {
   /**
    * @throws EntidadDuplicadaError
    * @throws PermisoInsuficienteError
    */
   crearInventario(
-    request: CrearInventarioRequestDto,
-  ): Promise<InventarioResponseDto>;
+    props: CrearInventarioConCantidadProps,
+  ): Promise<InventarioResponse>;
 
   /**
    * @throws EntidadNoEncontradaError
@@ -26,14 +36,14 @@ export interface InventarioService {
    * @throws OptimisticLockingError
    */
   reservarInventario(
-    request: ReservarInventarioRequestDto,
-  ): Promise<ReservaResponseDto>;
+    command: ReservarInventarioCommand,
+  ): Promise<ReservaResponse>;
 
   /**
    * @throws EntidadNoEncontradaError
    * @throws EstadoInvalidoError
    */
-  consolidarReserva(request: ConsolidarReservaRequestDto): Promise<void>;
+  consolidarReserva(props: ConsolidarReservaProps): Promise<void>;
 
   liberarReservasExpiradas(): Promise<void>;
 
@@ -42,11 +52,11 @@ export interface InventarioService {
    * @throws PermisoInsuficienteError
    * @throws StockInsuficienteError
    */
-  ajustarInventario(request: AjustarInventarioRequestDto): Promise<void>;
+  ajustarInventario(command: AjustarInventarioCommand): Promise<void>;
 
   consultarDisponibilidad(
-    request: ConsultarDisponibilidadRequestDto,
-  ): Promise<DisponibilidadResponseDto>;
+    props: ConsultarDisponibilidadProps,
+  ): Promise<DisponibilidadResponse>;
 
   /**
    * @throws EntidadNoEncontradaError
@@ -54,9 +64,9 @@ export interface InventarioService {
   obtenerInventarioPorItem(
     tipoItem: string,
     itemId: string,
-  ): Promise<InventarioResponseDto>;
+  ): Promise<InventarioResponse>;
 
-  detectarStockBajo(umbral: number): Promise<void>;
+  detectarStockBajo(): Promise<void>;
 
   /**
    * Elimina inventario si no tiene dependencias (reservas, movimientos o items)
@@ -66,5 +76,13 @@ export interface InventarioService {
    * @throws InventarioConDependenciasError
    * @throws OptimisticLockingError
    */
-  eliminarInventario(request: EliminarInventarioRequestDto): Promise<void>;
+  eliminarInventario(props: EliminarInventarioProps): Promise<void>;
+
+  /**
+   * Restaura inventario soft-deleted.
+   *
+   * @throws EntidadNoEncontradaError
+   * @throws EstadoInvalidoError
+   */
+  restaurarInventario(inventarioId: string): Promise<void>;
 }

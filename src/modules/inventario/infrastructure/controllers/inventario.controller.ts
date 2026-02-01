@@ -38,6 +38,7 @@ import {
   ApiConsultarDisponibilidad,
   ApiObtenerInventarioPorItem,
   ApiEliminarInventario,
+  ApiRestaurarInventario,
 } from '../../docs/decorators/api-inventario.decorator.js';
 
 @Controller('inventario')
@@ -55,7 +56,8 @@ export class InventarioController {
   async crearInventario(
     @Body() dto: CrearInventarioDto,
   ): Promise<InventarioResponseDto> {
-    return await this.inventarioService.crearInventario(dto);
+    const response = await this.inventarioService.crearInventario(dto);
+    return this.toInventarioDto(response);
   }
 
   @Post('reservar')
@@ -65,7 +67,8 @@ export class InventarioController {
   async reservarInventario(
     @Body() dto: ReservarInventarioDto,
   ): Promise<ReservaResponseDto> {
-    return await this.inventarioService.reservarInventario(dto);
+    const response = await this.inventarioService.reservarInventario(dto);
+    return this.toReservaDto(response);
   }
 
   @Patch('consolidar')
@@ -96,7 +99,9 @@ export class InventarioController {
   async consultarDisponibilidad(
     @Query() query: ConsultarDisponibilidadDto,
   ): Promise<DisponibilidadResponseDto> {
-    return await this.inventarioService.consultarDisponibilidad(query);
+    const response =
+      await this.inventarioService.consultarDisponibilidad(query);
+    return this.toDisponibilidadDto(response);
   }
 
   @Get('item/:tipoItem/:itemId')
@@ -105,10 +110,11 @@ export class InventarioController {
     @Param('tipoItem') tipoItem: string,
     @Param('itemId') itemId: string,
   ): Promise<InventarioResponseDto> {
-    return await this.inventarioService.obtenerInventarioPorItem(
+    const response = await this.inventarioService.obtenerInventarioPorItem(
       tipoItem,
       itemId,
     );
+    return this.toInventarioDto(response);
   }
 
   @Delete(':inventarioId')
@@ -119,5 +125,59 @@ export class InventarioController {
   ): Promise<{ message: string }> {
     await this.inventarioService.eliminarInventario({ inventarioId });
     return { message: 'Inventario eliminado exitosamente' };
+  }
+
+  @Patch(':inventarioId/restaurar')
+  @ApiRestaurarInventario()
+  @HttpCode(HttpStatus.OK)
+  async restaurarInventario(
+    @Param('inventarioId') inventarioId: string,
+  ): Promise<{ message: string }> {
+    await this.inventarioService.restaurarInventario(inventarioId);
+    return { message: 'Inventario restaurado exitosamente' };
+  }
+
+  /**
+   * Maps domain InventarioResponse to HTTP InventarioResponseDto.
+   * Controller layer converts domain types (enums) to API types (strings).
+   */
+  private toInventarioDto(response: any): InventarioResponseDto {
+    return {
+      id: response.id,
+      tipoItem: response.tipoItem,
+      itemId: response.itemId,
+      cantidadDisponible: response.cantidadDisponible,
+      cantidadReservada: response.cantidadReservada,
+      cantidadAbandono: response.cantidadAbandono,
+      ubicacion: response.ubicacion,
+      version: response.version,
+      fechaActualizacion: response.fechaActualizacion.toISOString(),
+    };
+  }
+
+  private toReservaDto(response: any): ReservaResponseDto {
+    return {
+      id: response.id,
+      inventarioId: response.inventarioId,
+      cantidad: response.cantidad,
+      estado: response.estado,
+      fechaCreacion: response.fechaCreacion.toISOString(),
+      fechaExpiracion: response.fechaExpiracion.toISOString(),
+      fechaResolucion: response.fechaResolucion?.toISOString(),
+      tipoOperacion: response.tipoOperacion,
+      operacionId: response.operacionId,
+      actorTipo: response.actorTipo,
+      actorId: response.actorId,
+      estaExpirada: response.estaExpirada,
+    };
+  }
+
+  private toDisponibilidadDto(response: any): DisponibilidadResponseDto {
+    return {
+      disponible: response.disponible,
+      cantidadDisponible: response.cantidadDisponible,
+      cantidadSolicitada: response.cantidadSolicitada,
+      mensaje: response.mensaje,
+    };
   }
 }

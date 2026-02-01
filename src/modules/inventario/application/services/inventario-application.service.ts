@@ -1,31 +1,28 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import {
   EntidadNoEncontradaError,
   EntidadDuplicadaError,
 } from '../../domain/exceptions';
 import type { InventarioRepository } from '../../domain/ports/outbound/inventario.repository';
 import type { EventBusPort } from '../../domain/ports/outbound/event-bus.port';
-import type {
-  TransactionManager,
-  TransactionContext,
-} from '../../domain/ports/outbound/transaction-manager.port';
+import type { TransactionManager } from '../../domain/ports/outbound/transaction-manager.port';
+import type { ConfiguracionPort } from '../../domain/ports/outbound/configuracion.port';
 import {
-  TipoActorEnum,
-  TipoItemEnum,
   TipoOperacionEnum,
+  ParametroConfiguracionInventario,
 } from '../../domain/aggregates/inventario/types';
 import type { InventarioService } from '../../domain/ports/inbound/inventario.service';
-import { CrearInventarioRequestDto } from '../dto/crear-inventario-request.dto';
-import { ReservarInventarioRequestDto } from '../dto/reservar-inventario-request.dto';
-import { ConsolidarReservaRequestDto } from '../dto/consolidar-reserva-request.dto';
-import { AjustarInventarioRequestDto } from '../dto/ajustar-inventario-request.dto';
-import { ConsultarDisponibilidadRequestDto } from '../dto/consultar-disponibilidad-request.dto';
-import { EliminarInventarioRequestDto } from '../dto/eliminar-inventario-request.dto';
-import { InventarioResponseDto } from '../dto/inventario-response.dto';
-import { ReservaResponseDto } from '../dto/reserva-response.dto';
-import { DisponibilidadResponseDto } from '../dto/disponibilidad-response.dto';
-import { InventarioMapper } from '../mappers/inventario.mapper';
-import { ReservaMapper } from '../mappers/reserva.mapper';
+import type {
+  CrearInventarioConCantidadProps,
+  ReservarInventarioCommand,
+  ConsolidarReservaProps,
+  AjustarInventarioCommand,
+  ConsultarDisponibilidadProps,
+  EliminarInventarioProps,
+  InventarioResponse,
+  ReservaResponse,
+  DisponibilidadResponse,
+} from '../../domain/aggregates/inventario/inventario.types';
 import { StockBajoDetectado } from '../../domain/events/stock-bajo-detectado.event';
 import { InventarioFactory } from '../../domain/factories';
 import {
@@ -38,18 +35,12 @@ import {
   INVENTARIO_REPOSITORY_TOKEN,
   EVENT_BUS_PORT_TOKEN,
   TRANSACTION_MANAGER_TOKEN,
+  CONFIGURACION_PORT_TOKEN,
 } from '../../domain/ports/tokens';
 
 @Injectable()
 export class InventarioApplicationService implements InventarioService {
-  private readonly DURACION_RESERVA_VENTA_MINUTOS = 20;
-  private readonly DURACION_RESERVA_CAMBIO_MINUTOS = 20;
-  private readonly UMBRAL_STOCK_BAJO = 10;
-  private readonly DURACION_RESERVA = {
-    [TipoOperacionEnum.CAMBIO]: this.DURACION_RESERVA_CAMBIO_MINUTOS,
-    [TipoOperacionEnum.VENTA]: this.DURACION_RESERVA_VENTA_MINUTOS,
-    [TipoOperacionEnum.AJUSTE]: 0,
-  } as const;
+  private readonly logger = new Logger(InventarioApplicationService.name);
 
   constructor(
     @Inject(INVENTARIO_REPOSITORY_TOKEN)
@@ -58,43 +49,45 @@ export class InventarioApplicationService implements InventarioService {
     private readonly eventBus: EventBusPort,
     @Inject(TRANSACTION_MANAGER_TOKEN)
     private readonly transactionManager: TransactionManager,
+    @Inject(CONFIGURACION_PORT_TOKEN)
+    private readonly configuracionPort: ConfiguracionPort,
   ) {}
 
   /**
    * Crea en 0 para forzar primer movimiento auditado, evitando stock sin origen.
    */
   async crearInventario(
-    request: CrearInventarioRequestDto,
-  ): Promise<InventarioResponseDto> {
+    props: CrearInventarioConCantidadProps,
+  ): Promise<InventarioResponse> {
     const existente = await this.inventarioRepo.buscarPorItem(
-      request.tipoItem,
-      request.itemId,
+      props.tipoItem,
+      props.itemId,
     );
 
     if (existente) {
       throw new EntidadDuplicadaError(
         'Inventario',
-        `${request.tipoItem}/${request.itemId}`,
+        `${props.tipoItem}/${props.itemId}`,
       );
     }
 
-    if (request.cantidadInicial < 0) {
+    if (props.cantidadInicial < 0) {
       throw new Error('Cantidad inicial no puede ser negativa');
     }
 
     const inventario = InventarioFactory.crear({
-      tipoItem: request.tipoItem as TipoItemEnum,
-      itemId: request.itemId,
-      ubicacion: request.ubicacion,
+      tipoItem: props.tipoItem,
+      itemId: props.itemId,
+      ubicacion: props.ubicacion,
     });
 
     let movimiento: MovimientoInventario | null = null;
-    if (request.cantidadInicial > 0) {
+    if (props.cantidadInicial > 0) {
       movimiento = inventario.ajustar({
-        cantidad: request.cantidadInicial,
-        empleadoId: request.empleadoId,
+        cantidad: props.cantidadInicial,
+        empleadoId: props.empleadoId,
         intencion: MovimientoInventario.INTENCION_ENTRADA_INICIAL,
-        notas: request.notas,
+        notas: props.notas,
       });
     }
 
@@ -104,35 +97,37 @@ export class InventarioApplicationService implements InventarioService {
 
     await this.publicarEventosDominio(inventario);
 
-    return InventarioMapper.toResponse(inventario);
+    return this.toInventarioResponse(inventario);
   }
 
   /**
    * Stock fantasma (ventas sin mercadería) requiere que inventario exista antes de reservar.
    */
   async reservarInventario(
-    request: ReservarInventarioRequestDto,
-  ): Promise<ReservaResponseDto> {
+    command: ReservarInventarioCommand,
+  ): Promise<ReservaResponse> {
     const inventario = await this.inventarioRepo.buscarPorItem(
-      request.tipoItem,
-      request.itemId,
+      command.tipoItem,
+      command.itemId,
     );
 
     if (!inventario) {
       throw new EntidadNoEncontradaError(
         'Inventario',
-        `${request.tipoItem}/${request.itemId}`,
+        `${command.tipoItem}/${command.itemId}`,
       );
     }
 
-    const duracionMinutos = this.DURACION_RESERVA[request.tipoOperacion];
+    const duracionMinutos = await this.obtenerDuracionReserva(
+      command.tipoOperacion,
+    );
 
     const { reserva, movimiento } = inventario.reservar({
-      cantidad: request.cantidad,
-      operacionId: request.operacionId,
-      tipoOperacion: request.tipoOperacion,
-      actorTipo: request.actorTipo,
-      actorId: request.actorId,
+      cantidad: command.cantidad,
+      operacionId: command.operacionId,
+      tipoOperacion: command.tipoOperacion,
+      actorTipo: command.actorTipo,
+      actorId: command.actorId,
       minutosExpiracion: duracionMinutos,
     });
 
@@ -143,7 +138,7 @@ export class InventarioApplicationService implements InventarioService {
 
     await this.publicarEventosDominio(inventario);
 
-    return ReservaMapper.toResponse(reserva);
+    return this.toReservaResponse(reserva);
   }
 
   /**
@@ -152,17 +147,17 @@ export class InventarioApplicationService implements InventarioService {
    * inventory aggregates. Events are published after successful commit to prevent
    * inconsistency if transaction rolls back.
    */
-  async consolidarReserva(request: ConsolidarReservaRequestDto): Promise<void> {
+  async consolidarReserva(props: ConsolidarReservaProps): Promise<void> {
     const inventarios: Inventario[] = [];
 
     await this.transactionManager.transaction(async (ctx) => {
       const reservas = await this.inventarioRepo.buscarReservasActivas(
-        request.operacionId,
+        props.operacionId,
         ctx,
       );
 
       if (!reservas.length) {
-        throw new EntidadNoEncontradaError('Reserva', request.operacionId);
+        throw new EntidadNoEncontradaError('Reserva', props.operacionId);
       }
 
       for (const reserva of reservas) {
@@ -204,26 +199,29 @@ export class InventarioApplicationService implements InventarioService {
         });
 
         await this.publicarEventosDominio(inventario);
-      } catch (error) {
-        console.error(`Error expirando reserva ${reserva.id}:`, error);
+      } catch (error: any) {
+        this.logger.error(
+          `Error expirando reserva ${reserva.id}: ${error.message}`,
+          error.stack,
+        );
       }
     }
   }
 
-  async ajustarInventario(request: AjustarInventarioRequestDto): Promise<void> {
+  async ajustarInventario(command: AjustarInventarioCommand): Promise<void> {
     const inventario = await this.inventarioRepo.buscarPorId(
-      request.inventarioId,
+      command.inventarioId,
     );
 
     if (!inventario) {
-      throw new EntidadNoEncontradaError('Inventario', request.inventarioId);
+      throw new EntidadNoEncontradaError('Inventario', command.inventarioId);
     }
 
     const movimiento = inventario.ajustar({
-      cantidad: request.cantidad,
-      empleadoId: request.empleadoId,
-      intencion: request.intencion,
-      notas: request.notas,
+      cantidad: command.cantidad,
+      empleadoId: command.empleadoId,
+      intencion: command.intencion,
+      notas: command.notas,
     });
 
     await this.inventarioRepo.guardar(inventario, {
@@ -234,38 +232,38 @@ export class InventarioApplicationService implements InventarioService {
   }
 
   async consultarDisponibilidad(
-    request: ConsultarDisponibilidadRequestDto,
-  ): Promise<DisponibilidadResponseDto> {
+    props: ConsultarDisponibilidadProps,
+  ): Promise<DisponibilidadResponse> {
     const inventario = await this.inventarioRepo.buscarPorItem(
-      request.tipoItem,
-      request.itemId,
+      props.tipoItem,
+      props.itemId,
     );
 
     if (!inventario) {
       return {
         disponible: false,
         cantidadDisponible: 0,
-        cantidadSolicitada: request.cantidad,
+        cantidadSolicitada: props.cantidad,
         mensaje: 'Producto no tiene inventario registrado',
       };
     }
 
-    const disponible = inventario.verificarDisponibilidad(request.cantidad);
+    const disponible = inventario.verificarDisponibilidad(props.cantidad);
     const mensaje = disponible
       ? 'Stock disponible'
-      : `Stock insuficiente: disponible ${inventario.cantidadDisponible.obtenerValor()}, solicitado ${request.cantidad}`;
+      : `Stock insuficiente: disponible ${inventario.cantidadDisponible.obtenerValor()}, solicitado ${props.cantidad}`;
     return {
       disponible,
       mensaje,
       cantidadDisponible: inventario.cantidadDisponible.obtenerValor(),
-      cantidadSolicitada: request.cantidad,
+      cantidadSolicitada: props.cantidad,
     };
   }
 
   async obtenerInventarioPorItem(
     tipoItem: string,
     itemId: string,
-  ): Promise<InventarioResponseDto> {
+  ): Promise<InventarioResponse> {
     const inventario = await this.inventarioRepo.buscarPorItem(
       tipoItem,
       itemId,
@@ -275,10 +273,14 @@ export class InventarioApplicationService implements InventarioService {
       throw new EntidadNoEncontradaError('Inventario', `${tipoItem}/${itemId}`);
     }
 
-    return InventarioMapper.toResponse(inventario);
+    return this.toInventarioResponse(inventario);
   }
 
-  async detectarStockBajo(umbral: number): Promise<void> {
+  async detectarStockBajo(): Promise<void> {
+    const umbral = await this.configuracionPort.obtenerParametro(
+      ParametroConfiguracionInventario.UMBRAL_STOCK_BAJO,
+    );
+
     const inventarios =
       await this.inventarioRepo.buscarInventariosBajoUmbral(umbral);
 
@@ -297,15 +299,13 @@ export class InventarioApplicationService implements InventarioService {
    * when inventory is first setup—not a business operation. This allows users to delete
    * freshly created inventories without being blocked by their own initialization record.
    */
-  async eliminarInventario(
-    request: EliminarInventarioRequestDto,
-  ): Promise<void> {
+  async eliminarInventario(props: EliminarInventarioProps): Promise<void> {
     const inventario = await this.inventarioRepo.buscarPorId(
-      request.inventarioId,
+      props.inventarioId,
     );
 
     if (!inventario) {
-      throw new EntidadNoEncontradaError('Inventario', request.inventarioId);
+      throw new EntidadNoEncontradaError('Inventario', props.inventarioId);
     }
 
     const reservas = await this.inventarioRepo.buscarReservasPorInventario(
@@ -327,6 +327,28 @@ export class InventarioApplicationService implements InventarioService {
     inventario.eliminar(tieneReservas, tieneMovimientos, tieneItems);
     await this.inventarioRepo.eliminar(inventario);
 
+    await this.publicarEventosDominio(inventario);
+  }
+
+  /**
+   * Restores a soft-deleted inventory back to active state.
+   * Validates that inventory exists AND is actually deleted before restoration.
+   * @throws EntidadNoEncontradaError if inventory doesn't exist or is not deleted
+   */
+  async restaurarInventario(inventarioId: string): Promise<void> {
+    const inventario =
+      await this.inventarioRepo.buscarEliminadoPorId(inventarioId);
+
+    if (!inventario) {
+      throw new EntidadNoEncontradaError(
+        'Inventario eliminado (no se puede restaurar un inventario activo)',
+        inventarioId,
+      );
+    }
+
+    inventario.restaurar();
+
+    await this.inventarioRepo.guardar(inventario);
     await this.publicarEventosDominio(inventario);
   }
 
@@ -372,5 +394,61 @@ export class InventarioApplicationService implements InventarioService {
     });
 
     return inventarioModificado;
+  }
+
+  /**
+   * AJUSTE operations don't need temporal reservation (0 minutes).
+   */
+  private async obtenerDuracionReserva(
+    tipoOperacion: TipoOperacionEnum,
+  ): Promise<number> {
+    if (tipoOperacion === TipoOperacionEnum.AJUSTE) {
+      return 0;
+    }
+
+    const parametro =
+      tipoOperacion === TipoOperacionEnum.VENTA
+        ? ParametroConfiguracionInventario.DURACION_RESERVA_VENTA
+        : ParametroConfiguracionInventario.DURACION_RESERVA_CAMBIO;
+
+    return this.configuracionPort.obtenerParametro(parametro);
+  }
+
+  /**
+   * Maps domain Inventario entity to InventarioResponse (domain type).
+   * Used internally to satisfy InventarioService interface.
+   */
+  private toInventarioResponse(inventario: Inventario): InventarioResponse {
+    return {
+      id: inventario.id,
+      tipoItem: inventario.tipoItem,
+      itemId: inventario.itemId,
+      cantidadDisponible: inventario.cantidadDisponible.obtenerValor(),
+      cantidadReservada: inventario.cantidadReservada.obtenerValor(),
+      cantidadAbandono: inventario.cantidadAbandono.obtenerValor(),
+      ubicacion: inventario.ubicacion,
+      version: inventario.version.obtenerNumero(),
+      fechaActualizacion: inventario.fechaActualizacion,
+    };
+  }
+
+  /**
+   * Maps domain Reserva entity to ReservaResponse (domain type).
+   */
+  private toReservaResponse(reserva: Reserva): ReservaResponse {
+    return {
+      id: reserva.id,
+      inventarioId: reserva.inventarioId,
+      cantidad: reserva.cantidad,
+      estado: reserva.estado,
+      fechaCreacion: reserva.fechaCreacion,
+      fechaExpiracion: reserva.fechaExpiracion.obtenerFecha(),
+      fechaResolucion: reserva.fechaResolucion,
+      tipoOperacion: reserva.tipoOperacion,
+      operacionId: reserva.operacionId,
+      actorTipo: reserva.actorTipo,
+      actorId: reserva.actorId,
+      estaExpirada: reserva.estaExpirada(),
+    };
   }
 }

@@ -8,6 +8,7 @@ import { InventarioModule } from './modules/inventario/infrastructure/inventario
 import { HttpExceptionFilter } from './shared/filters/http-exception.filter.js';
 import { ApiResponseInterceptor } from './shared/interceptors/api-response.interceptor.js';
 import { validateEnv } from '@shared/infrastructure/config';
+import { SharedModule } from './shared/shared.module.js';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { validateEnv } from '@shared/infrastructure/config';
       envFilePath: '.env',
     }),
     ScheduleModule.forRoot(),
+    SharedModule,
     InventarioModule,
   ],
   controllers: [AppController],

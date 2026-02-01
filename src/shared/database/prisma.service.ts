@@ -1,21 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class PrismaService extends PrismaClient {
-  private client: any;
-
-  constructor() {
-    const adapter = new PrismaPg({});
+  constructor(private readonly config: ConfigService) {
+    const adapter = new PrismaPg({
+      connectionString: config.get('DATABASE_URL'),
+    });
     super({ adapter });
-  }
-
-  get prisma() {
-    return this.client;
-  }
-
-  async transaction<T>(callback: (tx: any) => Promise<T>): Promise<T> {
-    return this.client.$transaction(callback);
   }
 }

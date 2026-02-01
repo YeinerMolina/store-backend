@@ -7,7 +7,7 @@
 //   1. Editar archivos en prisma/schemas/
 //   2. Ejecutar: npm run schema:merge
 //
-// Generado: 2026-01-29T10:53:43.955Z
+// Generado: 2026-02-01T12:27:29.554Z
 // Fuentes: base.prisma, inventario.prisma
 // ============================================================================
 
@@ -77,14 +77,15 @@ model Inventario {
   cantidadReservada  Int      @default(0) @map("cantidad_reservada")
   cantidadAbandono   Int      @default(0) @map("cantidad_abandono")
   version            Int      @default(1) @map("version")
-  deleted            Boolean  @default(false) @map("deleted")
   fechaActualizacion DateTime @updatedAt @map("fecha_actualizacion")
+  deleted            Boolean  @default(false) @map("deleted")
 
   reservas    Reserva[]
   movimientos MovimientoInventario[]
 
   @@unique([tipoItem, itemId], name: "idx_inventario_item")
   @@index([ubicacion], name: "idx_inventario_ubicacion")
+  @@index([deleted], name: "idx_inventario_deleted")
   @@map("inventario")
 }
 

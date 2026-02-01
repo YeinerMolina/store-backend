@@ -66,7 +66,7 @@ export class InventarioPostgresRepository implements InventarioRepository {
     if (ctx) {
       await fn(ctx);
     } else {
-      await this.prismaService.prisma.$transaction(fn);
+      await this.prismaService.$transaction(fn);
     }
   }
 
@@ -217,7 +217,7 @@ export class InventarioPostgresRepository implements InventarioRepository {
     id: string,
     ctx?: TransactionContext,
   ): Promise<Inventario | null> {
-    const prismaCtx = ctx || this.prismaService.prisma;
+    const prismaCtx = ctx || this.prismaService;
     const data = await prismaCtx.inventario.findUnique({
       where: { id, deleted: false },
     });
@@ -232,7 +232,7 @@ export class InventarioPostgresRepository implements InventarioRepository {
     itemId: string,
     ctx?: TransactionContext,
   ): Promise<Inventario | null> {
-    const prismaCtx = ctx || this.prismaService.prisma;
+    const prismaCtx = ctx || this.prismaService;
     const data = await prismaCtx.inventario.findUnique({
       where: {
         idx_inventario_item: {
@@ -249,7 +249,7 @@ export class InventarioPostgresRepository implements InventarioRepository {
   }
 
   async buscarTodos(ctx?: TransactionContext): Promise<Inventario[]> {
-    const prismaCtx = ctx || this.prismaService.prisma;
+    const prismaCtx = ctx || this.prismaService;
     const datos = await prismaCtx.inventario.findMany({
       where: { deleted: false },
     });
@@ -262,7 +262,7 @@ export class InventarioPostgresRepository implements InventarioRepository {
     umbral: number,
     ctx?: TransactionContext,
   ): Promise<Inventario[]> {
-    const prismaCtx = ctx || this.prismaService.prisma;
+    const prismaCtx = ctx || this.prismaService;
     const datos = await prismaCtx.inventario.findMany({
       where: {
         deleted: false,
@@ -280,7 +280,7 @@ export class InventarioPostgresRepository implements InventarioRepository {
     operacionId: string,
     ctx?: TransactionContext,
   ): Promise<Reserva[]> {
-    const prismaCtx = ctx || this.prismaService.prisma;
+    const prismaCtx = ctx || this.prismaService;
     const datos = await prismaCtx.reserva.findMany({
       where: {
         operacionId,
@@ -292,9 +292,8 @@ export class InventarioPostgresRepository implements InventarioRepository {
   }
 
   async buscarReservasExpiradas(ctx?: TransactionContext): Promise<Reserva[]> {
-    const prismaCtx = ctx || this.prismaService.prisma;
+    const prismaCtx = ctx || this.prismaService;
     const ahora = new Date();
-
     const datos = await prismaCtx.reserva.findMany({
       where: {
         estado: EstadoReservaEnum.ACTIVA,
@@ -304,6 +303,7 @@ export class InventarioPostgresRepository implements InventarioRepository {
       },
     });
 
+    console.log(datos);
     return datos.map((data) => PrismaReservaMapper.toDomain(data));
   }
 
@@ -311,7 +311,7 @@ export class InventarioPostgresRepository implements InventarioRepository {
     inventarioId: string,
     ctx?: TransactionContext,
   ): Promise<Reserva[]> {
-    const prismaCtx = ctx || this.prismaService.prisma;
+    const prismaCtx = ctx || this.prismaService;
     const datos = await prismaCtx.reserva.findMany({
       where: { inventarioId },
     });
@@ -328,7 +328,7 @@ export class InventarioPostgresRepository implements InventarioRepository {
     inventarioId: string,
     options?: BuscarMovimientosOptions,
   ): Promise<MovimientoInventario[]> {
-    const prismaCtx = options?.transactionContext ?? this.prismaService.prisma;
+    const prismaCtx = options?.transactionContext ?? this.prismaService;
 
     const datos = await prismaCtx.movimientoInventario.findMany({
       where: { inventarioId },

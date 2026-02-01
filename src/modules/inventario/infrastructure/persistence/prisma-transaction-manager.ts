@@ -13,7 +13,7 @@ export class PrismaTransactionManager implements TransactionManager {
   async transaction<T>(
     work: (ctx: PrismaTransactionClient) => Promise<T>,
   ): Promise<T> {
-    return this.prismaService.prisma.$transaction(
+    return this.prismaService.$transaction(
       async (tx: PrismaTransactionClient) => {
         return await work(tx);
       },

@@ -21,7 +21,7 @@ export class InventarioJobsService {
     try {
       await this.inventarioService.liberarReservasExpiradas();
       console.log('[JOB] Reservas expiradas liberadas');
-    } catch (error: any) {
+    } catch (error) {
       console.error('[JOB ERROR] Liberar reservas:', error.message);
     }
   }
@@ -38,7 +38,7 @@ export class InventarioJobsService {
       const umbral = 10; // TODO: Leer de CONFIGURACION (Paso 4)
       await this.inventarioService.detectarStockBajo(umbral);
       console.log('[JOB] Stock bajo detectado');
-    } catch (error: any) {
+    } catch (error) {
       console.error('[JOB ERROR] Detectar stock bajo:', error.message);
     }
   }

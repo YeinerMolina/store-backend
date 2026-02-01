@@ -551,6 +551,167 @@ El ORM debe soportar:
 
 ---
 
+## Skills y Patrones de Código
+
+Este proyecto utiliza **skills** para garantizar consistencia en patrones de código y mejores prácticas. Las skills son guías autocontenidas que se activan automáticamente según el contexto de trabajo.
+
+### Skills Disponibles
+
+Todas las skills están en `.claude/skills/` y se cargan automáticamente cuando trabajas en contextos específicos:
+
+| Skill               | Contexto de Activación                                       | Ubicación                         |
+| ------------------- | ------------------------------------------------------------ | --------------------------------- |
+| **typescript**      | Al escribir código TypeScript (tipos, interfaces, genéricos) | `.claude/skills/typescript/`      |
+| **zod-4**           | Al trabajar con validaciones Zod (DTOs, schemas)             | `.claude/skills/zod-4/`           |
+| **code-documenter** | Al documentar código o revisar comentarios                   | `.claude/skills/code-documenter/` |
+
+### Cuándo se Activan las Skills
+
+#### TypeScript Skill
+
+**Se activa cuando**:
+
+- Defines tipos, interfaces o enums
+- Trabajas con genéricos
+- Escribes archivos `.ts` en cualquier módulo
+- Defines Types del dominio (`domain/aggregates/{entidad}/{entidad}.types.ts`)
+
+**Patrones clave**:
+
+- ✅ Const Types Pattern (crear objeto const primero, luego extraer tipo)
+- ✅ Interfaces planas (un nivel de profundidad)
+- ✅ NUNCA usar `any`, usar `unknown` + type guards
+- ✅ Utility types (Pick, Omit, Partial, etc.)
+
+**Ejemplo**:
+
+```typescript
+// ✅ CORRECTO: Const Types Pattern
+const TipoOperacionEnum = {
+  VENTA: 'VENTA',
+  CAMBIO: 'CAMBIO',
+  AJUSTE: 'AJUSTE',
+} as const;
+
+type TipoOperacion = (typeof TipoOperacionEnum)[keyof typeof TipoOperacionEnum];
+
+// ❌ INCORRECTO: Direct union type
+type TipoOperacion = 'VENTA' | 'CAMBIO' | 'AJUSTE';
+```
+
+#### Zod-4 Skill
+
+**Se activa cuando**:
+
+- Defines DTOs de aplicación (`application/dto/*.dto.ts`)
+- Creas schemas de validación
+- Trabajas con validaciones HTTP/API
+
+**Patrones clave**:
+
+- ✅ Usa validadores top-level de Zod 4 (`z.email()`, `z.uuid()`, `z.url()`)
+- ✅ NUNCA usar Zod 3 patterns (`z.string().email()`)
+- ✅ Custom error messages con `{ error: "mensaje" }`
+- ✅ `safeParse()` para validaciones no-críticas
+
+**Ejemplo**:
+
+```typescript
+// ✅ CORRECTO: Zod 4
+const reservarInventarioSchema = z.object({
+  itemId: z.uuid({ error: 'ID de item inválido' }),
+  cantidad: z.number().int().positive(),
+  tipoOperacion: z.enum(['VENTA', 'CAMBIO', 'AJUSTE']),
+});
+
+// ❌ INCORRECTO: Zod 3
+const schema = z.object({
+  itemId: z.string().uuid(), // ❌ Obsoleto en Zod 4
+});
+```
+
+#### Code-Documenter Skill
+
+**Se activa cuando**:
+
+- Agregas comentarios JSDoc
+- Revisas o limpias documentación existente
+- Documentas decisiones arquitectónicas en código
+
+**Patrones clave**:
+
+- ✅ Comentar el WHY, NUNCA el WHAT
+- ✅ Documentar side effects y comportamientos no obvios
+- ✅ Usar JSDoc en TypeScript (`/** */`)
+- ❌ NUNCA comentar nombres de propiedades obvias
+- ❌ NUNCA comentar "qué hace" el código (eso se lee)
+
+**Ejemplo**:
+
+```typescript
+// ✅ CORRECTO: Explica WHY y side effects
+/**
+ * Usa UUID v7 en lugar de v4 porque está ordenado temporalmente.
+ * Esto reduce fragmentación en índices PostgreSQL un 28%.
+ *
+ * @throws {InvalidFormatError} Si el string no es un UUID válido
+ */
+class UUID extends ValueObject<string> {}
+
+// ❌ INCORRECTO: Explica lo obvio
+/**
+ * Clase UUID
+ */
+class UUID {}
+
+/** El ID del usuario */
+userId: string; // ❌ Obvio, no aporta valor
+```
+
+### Cómo Usar las Skills
+
+**Las skills se cargan automáticamente** cuando detectan su contexto. No necesitas hacer nada manualmente.
+
+**Para consultar una skill manualmente**:
+
+```bash
+# Ver skill de TypeScript
+cat .claude/skills/typescript/SKILL.md
+
+# Ver skill de Zod 4
+cat .claude/skills/zod-4/SKILL.md
+
+# Ver skill de documentación
+cat .claude/skills/code-documenter/SKILL.md
+```
+
+### Agregar Nuevas Skills
+
+Si necesitas agregar una skill específica para este proyecto (ej: patrones de NestJS, Prisma, testing):
+
+1. Crea directorio en `.claude/skills/{nombre-skill}/`
+2. Crea archivo `SKILL.md` con:
+   - Metadata (name, description, trigger)
+   - Patrones clave (✅ correcto vs ❌ incorrecto)
+   - Ejemplos específicos del proyecto
+3. Actualiza esta sección del CLAUDE.md
+
+**Ejemplo de estructura**:
+
+```
+.claude/skills/
+├── typescript/
+│   └── SKILL.md
+├── zod-4/
+│   └── SKILL.md
+├── code-documenter/
+│   └── SKILL.md
+└── nestjs-ddd/          ← Nueva skill
+    └── SKILL.md
+```
+
+---
+
 ## Próximos Pasos para Implementación
 
 ### 1. **Entender la Arquitectura Hexagonal**

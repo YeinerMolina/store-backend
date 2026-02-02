@@ -1,13 +1,21 @@
-import { Global, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { EventBusModule } from './infrastructure/event-bus/event-bus.module';
+import { PrismaService } from './database/prisma.service';
 
 /**
  * SharedModule centralizes common infrastructure for all bounded contexts.
- * @Global makes EVENT_BUS_PORT_TOKEN available without explicit imports.
+ * Must be explicitly imported by modules that need PrismaService or EventBusModule.
+ *
+ * Providers:
+ * - PrismaService: Database connection singleton
+ *
+ * Exports:
+ * - PrismaService: Available to importing modules
+ * - EventBusModule: Event publishing infrastructure
  */
-@Global()
 @Module({
   imports: [EventBusModule],
-  exports: [EventBusModule],
+  providers: [PrismaService],
+  exports: [EventBusModule, PrismaService],
 })
 export class SharedModule {}

@@ -17,6 +17,10 @@ export const setupSwagger = (app: INestApplication): void => {
       'API REST para sistema de tienda retail con arquitectura hexagonal y DDD',
     )
     .setVersion('2.1.0')
+    .addTag(
+      'Configuración',
+      'Gestión de parámetros operativos y políticas del sistema',
+    )
     .addTag('Inventario', 'Gestión de stock, reservas y movimientos')
     .addBearerAuth()
     .build();

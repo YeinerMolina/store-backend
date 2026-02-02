@@ -5,6 +5,7 @@ import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { InventarioModule } from './modules/inventario/infrastructure/inventario.module.js';
+import { ConfiguracionModule } from './modules/configuracion/configuracion.module.js';
 import { HttpExceptionFilter } from './shared/filters/http-exception.filter.js';
 import { ApiResponseInterceptor } from './shared/interceptors/api-response.interceptor.js';
 import { validateEnv } from '@shared/infrastructure/config';
@@ -21,6 +22,7 @@ import { SharedModule } from './shared/shared.module.js';
     ScheduleModule.forRoot(),
     SharedModule,
     InventarioModule,
+    ConfiguracionModule,
   ],
   controllers: [AppController],
   providers: [

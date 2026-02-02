@@ -13,6 +13,7 @@ import {
   TRANSACTION_MANAGER_TOKEN,
   CONFIGURACION_PORT_TOKEN,
 } from '../domain/ports/tokens';
+import { SharedModule } from '@shared/shared.module';
 
 /**
  * Inventario module - complete DDD aggregate with full lifecycle management.
@@ -46,28 +47,30 @@ import {
     },
     {
       provide: INVENTARIO_SERVICE_TOKEN,
-      useFactory: (
-        inventarioRepo,
-        eventBus,
-        transactionManager,
-        configuracionPort,
-      ) => {
-        return new InventarioApplicationService(
-          inventarioRepo,
-          eventBus,
-          transactionManager,
-          configuracionPort,
-        );
-      },
-      inject: [
-        INVENTARIO_REPOSITORY_TOKEN,
-        EVENT_BUS_PORT_TOKEN,
-        TRANSACTION_MANAGER_TOKEN,
-        CONFIGURACION_PORT_TOKEN,
-      ],
+      useClass: InventarioApplicationService,
+      // useFactory: (
+      //   inventarioRepo,
+      //   eventBus,
+      //   transactionManager,
+      //   configuracionPort,
+      // ) => {
+      //   return new InventarioApplicationService(
+      //     inventarioRepo,
+      //     eventBus,
+      //     transactionManager,
+      //     configuracionPort,
+      //   );
+      // },
+      // inject: [
+      //   INVENTARIO_REPOSITORY_TOKEN,
+      //   EVENT_BUS_PORT_TOKEN,
+      //   TRANSACTION_MANAGER_TOKEN,
+      //   CONFIGURACION_PORT_TOKEN,
+      // ],
     },
   ],
   controllers: [InventarioController],
   exports: [INVENTARIO_SERVICE_TOKEN],
+  imports: [SharedModule],
 })
 export class InventarioModule {}

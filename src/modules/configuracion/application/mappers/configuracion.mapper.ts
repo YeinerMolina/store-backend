@@ -1,12 +1,3 @@
-/**
- * Mapper: Transforms between domain and application layers.
- *
- * Domain → DTO: Converts domain data to HTTP responses (Date → ISO string).
- * Request DTO → Domain Props: Converts HTTP input to domain props (string → enum).
- *
- * Note: Persistence mappers (entity ↔ database) live in infrastructure/persistence/mappers/
- */
-
 import {
   ActualizarParametroOperativoProps,
   CrearParametroOperativoProps,
@@ -14,8 +5,10 @@ import {
   ParametroOperativoData,
   PoliticaData,
   PublicarPoliticaProps,
-  TipoDatoEnum,
-  TipoPoliticaEnum,
+  isTipoDato,
+  isTipoPolitica,
+  ParametroOperativo,
+  Politica,
 } from '@configuracion/domain';
 import {
   ActualizarParametroOperativoRequestDto,
@@ -29,9 +22,39 @@ import {
 } from '../dto/configuracion-response.dto';
 
 export class ConfiguracionMapper {
+  static parametroToData(p: ParametroOperativo): ParametroOperativoData {
+    return {
+      id: p.getId(),
+      clave: p.getClave(),
+      nombre: p.getNombre(),
+      descripcion: p.getDescripcion(),
+      tipoDato: p.getTipoDato(),
+      valor: p.getValor(),
+      valorDefecto: p.getValorDefecto(),
+      valorMinimo: p.getValorMinimo(),
+      valorMaximo: p.getValorMaximo(),
+      requiereReinicio: p.isRequiereReinicio(),
+      modificadoPorId: p.getModificadoPorId(),
+      fechaModificacion: p.getFechaModificacion(),
+    };
+  }
+
+  static politicaToData(p: Politica): PoliticaData {
+    return {
+      id: p.getId(),
+      tipo: p.getTipo(),
+      version: p.getVersion(),
+      contenido: p.getContenido(),
+      estado: p.getEstado(),
+      fechaVigenciaDesde: p.getFechaVigenciaDesde(),
+      fechaVigenciaHasta: p.getFechaVigenciaHasta(),
+      publicadoPorId: p.getPublicadoPorId(),
+      fechaCreacion: p.getFechaCreacion(),
+    };
+  }
+
   /**
-   * Domain data → Response DTO.
-   * Converts Date to ISO string for HTTP transmission.
+   * Convierte Date a ISO string para HTTP.
    */
   static parametroToResponseDto(
     data: ParametroOperativoData,
@@ -55,8 +78,7 @@ export class ConfiguracionMapper {
   }
 
   /**
-   * Domain data → Response DTO.
-   * Converts Date to ISO string for HTTP transmission.
+   * Convierte Date a ISO string para HTTP.
    */
   static politicaToResponseDto(data: PoliticaData): PoliticaResponseDto {
     const dto = new PoliticaResponseDto();
@@ -74,27 +96,18 @@ export class ConfiguracionMapper {
     return dto;
   }
 
-  /**
-   * Request DTO → Domain props.
-   * Converts string tipoDato (from HTTP) to domain enum.
-   * Zod already validated the enum, so cast is safe.
-   */
   static crearRequestToProps(
     request: CrearParametroOperativoRequestDto,
   ): CrearParametroOperativoProps {
-    const tipoDato = Object.values(TipoDatoEnum).includes(
-      request.tipoDato as any,
-    )
-      ? (request.tipoDato as any)
-      : (() => {
-          throw new Error(`Tipo de dato inválido: ${request.tipoDato}`);
-        })();
+    if (!isTipoDato(request.tipoDato)) {
+      throw new Error(`Tipo de dato inválido: ${request.tipoDato}`);
+    }
 
     return {
       clave: request.clave,
       nombre: request.nombre,
       descripcion: request.descripcion,
-      tipoDato,
+      tipoDato: request.tipoDato,
       valor: request.valor,
       valorDefecto: request.valorDefecto,
       valorMinimo: request.valorMinimo,
@@ -104,8 +117,7 @@ export class ConfiguracionMapper {
   }
 
   /**
-   * Request DTO → Domain props.
-   * modificadoPorId comes from HTTP context (authenticated user), not from request.
+   * modificadoPorId viene del contexto HTTP (usuario autenticado), no del request.
    */
   static actualizarRequestToProps(
     request: ActualizarParametroOperativoRequestDto,
@@ -116,21 +128,15 @@ export class ConfiguracionMapper {
     };
   }
 
-  /**
-   * Request DTO → Domain props.
-   * Converts string tipo (from HTTP) to domain enum.
-   */
   static crearPoliticaRequestToProps(
     request: CrearPoliticaRequestDto,
   ): CrearPoliticaProps {
-    const tipo = Object.values(TipoPoliticaEnum).includes(request.tipo as any)
-      ? (request.tipo as any)
-      : (() => {
-          throw new Error(`Tipo de política inválido: ${request.tipo}`);
-        })();
+    if (!isTipoPolitica(request.tipo)) {
+      throw new Error(`Tipo de política inválido: ${request.tipo}`);
+    }
 
     return {
-      tipo,
+      tipo: request.tipo,
       version: request.version,
       contenido: request.contenido,
       publicadoPorId: undefined,
@@ -138,8 +144,7 @@ export class ConfiguracionMapper {
   }
 
   /**
-   * Request DTO → Domain props.
-   * publicadoPorId comes from HTTP context (authenticated user).
+   * publicadoPorId viene del contexto HTTP (usuario autenticado).
    */
   static publicarRequestToProps(
     request: PublicarPoliticaRequestDto,

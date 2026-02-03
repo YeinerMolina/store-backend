@@ -1,29 +1,5 @@
-/**
- * Schemas Zod 4 - Validación de DTOs
- *
- * Estos schemas validan los datos que recibimos del cliente.
- * Se usan en middlewares/decoradores de validación en los controllers.
- *
- * Patrón Zod 4:
- * - Usa validadores top-level: z.email(), z.uuid()
- * - Usa "error" param en lugar de "message"
- * - Coerciones con z.coerce.* para conversión de tipos
- */
-
 import { z } from 'zod';
 
-// ==================== PARÁMETROS OPERATIVOS ====================
-
-/**
- * Schema: Crear Parámetro Operativo
- *
- * Validaciones:
- * - clave: 3-50 chars, solo MAYÚSCULAS y guiones bajos
- * - nombre: 3-100 chars
- * - tipoDato: uno de 5 valores permitidos
- * - valor y valorDefecto: no vacíos
- * - requiereReinicio: boolean opcional (default: false)
- */
 export const CrearParametroOperativoSchema = z.object({
   clave: z
     .string({ error: 'Clave debe ser string' })
@@ -69,12 +45,6 @@ export type CrearParametroOperativoSchemaType = z.infer<
   typeof CrearParametroOperativoSchema
 >;
 
-/**
- * Schema: Actualizar Parámetro Operativo
- *
- * Validaciones:
- * - valor: no vacío, máximo 500 chars
- */
 export const ActualizarParametroOperativoSchema = z.object({
   valor: z
     .string({ error: 'Valor debe ser string' })
@@ -86,16 +56,6 @@ export type ActualizarParametroOperativoSchemaType = z.infer<
   typeof ActualizarParametroOperativoSchema
 >;
 
-// ==================== POLÍTICAS ====================
-
-/**
- * Schema: Crear Política
- *
- * Validaciones:
- * - tipo: uno de 3 valores permitidos
- * - version: formato semántico X.Y.Z (ej: 2.1.0)
- * - contenido: mínimo 10 caracteres
- */
 export const CrearPoliticaSchema = z.object({
   tipo: z.enum(['CAMBIOS', 'ENVIOS', 'TERMINOS'], {
     error: 'Tipo debe ser: CAMBIOS, ENVIOS, TERMINOS',
@@ -115,12 +75,6 @@ export const CrearPoliticaSchema = z.object({
 
 export type CrearPoliticaSchemaType = z.infer<typeof CrearPoliticaSchema>;
 
-/**
- * Schema: Publicar Política
- *
- * Validaciones:
- * - fechaVigenciaDesde: fecha ISO opcional
- */
 export const PublicarPoliticaSchema = z.object({
   fechaVigenciaDesde: z.coerce
     .date({ error: 'Fecha vigencia debe ser un ISO string válido' })

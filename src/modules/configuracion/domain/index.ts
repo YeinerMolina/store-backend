@@ -1,9 +1,3 @@
-/**
- * Barrel Export - Domain Layer
- *
- * Facilita importaciones desde otros módulos
- */
-
 // Agregados
 export { ParametroOperativo } from './aggregates/parametro-operativo/parametro-operativo.entity';
 export { Politica } from './aggregates/politica/politica.entity';
@@ -25,6 +19,13 @@ export {
   TipoDatoEnum,
   TipoPoliticaEnum,
   EstadoPoliticaEnum,
+} from './aggregates/configuracion.types';
+
+// Type guards
+export {
+  isTipoDato,
+  isTipoPolitica,
+  isEstadoPolitica,
 } from './aggregates/configuracion.types';
 
 // Puertos

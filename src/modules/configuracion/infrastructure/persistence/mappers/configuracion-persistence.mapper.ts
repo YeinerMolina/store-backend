@@ -1,45 +1,36 @@
-/**
- * Persistence Mapper: Transforms between domain entities and database models.
- *
- * Domain Entity → Prisma: Serialize aggregates for persistence.
- * Prisma → Domain Data: Hydrate entities from database records.
- *
- * Note: This differs from application mapper (domain ↔ HTTP).
- * Here we handle database serialization concerns.
- */
-
 import type {
   ParametroOperativoData,
   PoliticaData,
 } from '@configuracion/domain';
 import {
-  TipoDatoEnum,
-  TipoPoliticaEnum,
-  EstadoPoliticaEnum,
+  isTipoDato,
+  isTipoPolitica,
+  isEstadoPolitica,
 } from '@configuracion/domain';
 import type {
   ParametroOperativo as PrismaParametroOperativo,
   Politica as PrismaPolitica,
 } from '@prisma/client';
 
-/**
- * Persistence mapper for CONFIGURACIÓN aggregates.
- * Handles bidirectional transformation with Prisma models.
- */
 export class ConfiguracionPersistenceMapper {
   /**
-   * Prisma ParametroOperativo → Domain Data.
-   * Converts database record to domain data for hydration.
+   * Throw si BD tiene valores de enum corruptos.
    */
   static prismaToDomainParametroData(
     record: PrismaParametroOperativo,
   ): ParametroOperativoData {
+    if (!isTipoDato(record.tipoDato)) {
+      throw new Error(
+        `BD corrupta: tipoDato inválido en registro ${record.id}: ${record.tipoDato}`,
+      );
+    }
+
     return {
       id: record.id,
       clave: record.clave,
       nombre: record.nombre,
       descripcion: record.descripcion ?? undefined,
-      tipoDato: record.tipoDato as any,
+      tipoDato: record.tipoDato,
       valor: record.valor,
       valorDefecto: record.valorDefecto,
       valorMinimo: record.valorMinimo ?? undefined,
@@ -50,10 +41,6 @@ export class ConfiguracionPersistenceMapper {
     };
   }
 
-  /**
-   * Domain ParametroOperativoData → Prisma insert/update object.
-   * Converts domain data to format expected by create/update operations.
-   */
   static domainDataToPrismaParametro(data: ParametroOperativoData) {
     return {
       id: data.id,
@@ -72,16 +59,27 @@ export class ConfiguracionPersistenceMapper {
   }
 
   /**
-   * Prisma Politica → Domain Data.
-   * Converts database record to domain data for hydration.
+   * Throw si BD tiene valores de tipo o estado corruptos.
    */
   static prismaToDomainPoliticaData(record: PrismaPolitica): PoliticaData {
+    if (!isTipoPolitica(record.tipo)) {
+      throw new Error(
+        `BD corrupta: tipo inválido en política ${record.id}: ${record.tipo}`,
+      );
+    }
+
+    if (!isEstadoPolitica(record.estado)) {
+      throw new Error(
+        `BD corrupta: estado inválido en política ${record.id}: ${record.estado}`,
+      );
+    }
+
     return {
       id: record.id,
-      tipo: record.tipo as any,
+      tipo: record.tipo,
       version: record.version,
       contenido: record.contenido,
-      estado: record.estado as any,
+      estado: record.estado,
       fechaVigenciaDesde: record.fechaVigenciaDesde ?? undefined,
       fechaVigenciaHasta: record.fechaVigenciaHasta ?? undefined,
       publicadoPorId: record.publicadoPor ?? undefined,
@@ -89,10 +87,6 @@ export class ConfiguracionPersistenceMapper {
     };
   }
 
-  /**
-   * Domain PoliticaData → Prisma insert/update object.
-   * Converts domain data to format expected by create/update operations.
-   */
   static domainDataToPrismaPolitica(data: PoliticaData) {
     return {
       id: data.id,

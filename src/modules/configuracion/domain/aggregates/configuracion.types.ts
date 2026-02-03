@@ -1,11 +1,3 @@
-/**
- * Domain Types - CONFIGURACIÓN Module
- *
- * DTOs use primitive types (string, number) from HTTP layer.
- * Domain types use enums and business-specific validations.
- * This separation allows domain and persistence models to evolve independently.
- */
-
 export const TipoDatoEnum = {
   ENTERO: 'ENTERO',
   DECIMAL: 'DECIMAL',
@@ -34,6 +26,30 @@ export const EstadoPoliticaEnum = {
 export type EstadoPolitica =
   (typeof EstadoPoliticaEnum)[keyof typeof EstadoPoliticaEnum];
 
+/**
+ * Permite validación type-safe eliminando uso de `any` en mappers.
+ */
+export function isTipoDato(value: unknown): value is TipoDato {
+  return (
+    typeof value === 'string' &&
+    Object.values(TipoDatoEnum).includes(value as TipoDato)
+  );
+}
+
+export function isTipoPolitica(value: unknown): value is TipoPolitica {
+  return (
+    typeof value === 'string' &&
+    Object.values(TipoPoliticaEnum).includes(value as TipoPolitica)
+  );
+}
+
+export function isEstadoPolitica(value: unknown): value is EstadoPolitica {
+  return (
+    typeof value === 'string' &&
+    Object.values(EstadoPoliticaEnum).includes(value as EstadoPolitica)
+  );
+}
+
 export interface CrearParametroOperativoProps {
   readonly clave: string;
   readonly nombre: string;
@@ -52,8 +68,7 @@ export interface ActualizarParametroOperativoProps {
 }
 
 /**
- * Used by repository to reconstruct aggregates from database.
- * Never emits events (only factory.desde() does).
+ * Reconstruye agregados desde BD sin emitir eventos.
  */
 export interface ParametroOperativoData {
   readonly id: string;
@@ -83,8 +98,7 @@ export interface PublicarPoliticaProps {
 }
 
 /**
- * Used by repository to reconstruct aggregates from database.
- * Never emits events (only factory.desde() does).
+ * Reconstruye agregados desde BD sin emitir eventos.
  */
 export interface PoliticaData {
   readonly id: string;

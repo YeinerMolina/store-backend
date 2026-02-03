@@ -1,16 +1,5 @@
-/**
- * Domain Events - CONFIGURACIÓN Module
- *
- * Events emitted by aggregates during state transitions.
- * Used for auditability (EventoDominio table) and cross-module communication.
- */
-
 import { TipoPolitica } from '../aggregates/configuracion.types';
 
-/**
- * Emitted when ParametroOperativo is created.
- * Contains clave (unique identifier) and initial value.
- */
 export class ParametroOperativoCreado {
   readonly eventType = 'ParametroOperativoCreado';
 
@@ -23,8 +12,7 @@ export class ParametroOperativoCreado {
 }
 
 /**
- * Emitted when ParametroOperativo value changes.
- * requiereReinicio flag notifies if app restart is needed.
+ * Flag requiereReinicio indica si se necesita reiniciar la app.
  */
 export class ParametroOperativoActualizado {
   readonly eventType = 'ParametroOperativoActualizado';
@@ -40,8 +28,7 @@ export class ParametroOperativoActualizado {
 }
 
 /**
- * Emitted when Politica is created (BORRADOR state).
- * Not yet effective; needs publishing first.
+ * Política creada en estado BORRADOR (aún no vigente).
  */
 export class PoliticaCreada {
   readonly eventType = 'PoliticaCreada';
@@ -54,10 +41,6 @@ export class PoliticaCreada {
   ) {}
 }
 
-/**
- * Emitted when Politica transitions BORRADOR → VIGENTE.
- * fechaVigenciaDesde marks when policy becomes effective.
- */
 export class PoliticaPublicada {
   readonly eventType = 'PoliticaPublicada';
 
@@ -70,10 +53,6 @@ export class PoliticaPublicada {
   ) {}
 }
 
-/**
- * Emitted when Politica transitions → ARCHIVADA.
- * Marks end of policy's validity period.
- */
 export class PoliticaArchivada {
   readonly eventType = 'PoliticaArchivada';
 

@@ -1,11 +1,3 @@
-/**
- * ParametroOperativo Aggregate Root
- *
- * Validates values by type (ENTERO, DECIMAL, BOOLEAN, DURACION, TEXTO).
- * Enforces range constraints [min, max] for numeric types.
- * Immutable after creation; changes are tracked via events.
- */
-
 import { IdGenerator } from '@shared/domain/factories';
 import {
   ActualizarParametroOperativoProps,
@@ -26,7 +18,7 @@ export class ParametroOperativo {
   )[] = [];
 
   /**
-   * Private constructor. Use crear() or desde() factory methods.
+   * Campos con prefijo _ son mutables internamente pero readonly externamente.
    */
   private constructor(
     private readonly id: string,
@@ -34,23 +26,17 @@ export class ParametroOperativo {
     private readonly nombre: string,
     private readonly descripcion: string | undefined,
     private readonly tipoDato: TipoDato,
-    private valor: string,
+    private _valor: string,
     private readonly valorDefecto: string,
     private readonly valorMinimo: string | undefined,
     private readonly valorMaximo: string | undefined,
     private readonly requiereReinicio: boolean,
-    private modificadoPorId: string | undefined,
-    private fechaModificacion: Date,
+    private _modificadoPorId: string | undefined,
+    private _fechaModificacion: Date,
   ) {
     Object.freeze(this);
   }
 
-  /**
-   * Factory: Create new ParametroOperativo
-   *
-   * Validates value type and range constraints.
-   * Emits ParametroOperativoCreado event for auditability.
-   */
   static crear(params: CrearParametroOperativoProps): ParametroOperativo {
     const id = IdGenerator.generate();
 
@@ -88,10 +74,7 @@ export class ParametroOperativo {
   }
 
   /**
-   * Factory: Reconstruct from persisted data without emitting events.
-   *
-   * Used by repository when loading from database.
-   * Events are NOT emitted here; only created() emits.
+   * Reconstituye desde BD sin emitir eventos.
    */
   static desde(data: ParametroOperativoData): ParametroOperativo {
     return new ParametroOperativo(
@@ -111,11 +94,7 @@ export class ParametroOperativo {
   }
 
   /**
-   * Update parameter value.
-   *
-   * Validates value type and range constraints.
-   * Emits ParametroOperativoActualizado with requiereReinicio flag.
-   * This flag notifies consumers if app restart is needed.
+   * Evento emitido incluye flag requiereReinicio para notificar si se necesita reiniciar la app.
    */
   actualizar(params: ActualizarParametroOperativoProps): void {
     ParametroOperativo.validarValor(params.valor, this.tipoDato);
@@ -129,10 +108,10 @@ export class ParametroOperativo {
       );
     }
 
-    const valorAnterior = this.valor;
-    (this as any).valor = params.valor;
-    (this as any).modificadoPorId = params.modificadoPorId;
-    (this as any).fechaModificacion = new Date();
+    const valorAnterior = this._valor;
+    this._valor = params.valor;
+    this._modificadoPorId = params.modificadoPorId;
+    this._fechaModificacion = new Date();
 
     this.eventos.push(
       new ParametroOperativoActualizado(
@@ -145,10 +124,6 @@ export class ParametroOperativo {
     );
   }
 
-  /**
-   * Private: Validate value matches type constraints.
-   * Throws if validation fails (e.g., "abc" for ENTERO type).
-   */
   private static validarValor(valor: string, tipo: TipoDato): void {
     if (!valor || valor.trim() === '') {
       throw new Error(`Valor no puede estar vacío para tipo ${tipo}`);
@@ -180,7 +155,6 @@ export class ParametroOperativo {
         break;
 
       case TipoDatoEnum.DURACION:
-        // Formato esperado: "20 minutes", "5 hours", "1 day", etc.
         if (!/^\d+\s+(minute|hour|day|second)s?$/.test(valor)) {
           throw new Error(
             `Valor debe tener formato "N unit" para tipo DURACION, recibido: ${valor}`,
@@ -189,7 +163,6 @@ export class ParametroOperativo {
         break;
 
       case TipoDatoEnum.TEXTO:
-        // TEXTO acepta cualquier string no vacío
         break;
 
       default:
@@ -198,9 +171,7 @@ export class ParametroOperativo {
   }
 
   /**
-   * Private: Validate value within [min, max] range.
-   * Only applies to ENTERO and DECIMAL types.
-   * Throws if value is out of bounds.
+   * Solo aplica a tipos ENTERO y DECIMAL.
    */
   private static validarRango(
     valor: string,
@@ -254,7 +225,7 @@ export class ParametroOperativo {
   }
 
   getValor(): string {
-    return this.valor;
+    return this._valor;
   }
 
   getValorDefecto(): string {
@@ -274,24 +245,22 @@ export class ParametroOperativo {
   }
 
   getModificadoPorId(): string | undefined {
-    return this.modificadoPorId;
+    return this._modificadoPorId;
   }
 
   getFechaModificacion(): Date {
-    return this.fechaModificacion;
+    return this._fechaModificacion;
   }
 
   /**
-   * Returns defensive copy of emitted events.
-   * Caller cannot modify internal state via this reference.
+   * Retorna copia defensiva para prevenir modificación externa.
    */
   getEventos(): (ParametroOperativoCreado | ParametroOperativoActualizado)[] {
     return [...this.eventos];
   }
 
   /**
-   * Clear events after persistence.
-   * Called by repository after saving to prevent duplicate event handling.
+   * Limpia eventos post-persistencia para prevenir duplicados.
    */
   vaciarEventos(): void {
     (this as any).eventos.length = 0;

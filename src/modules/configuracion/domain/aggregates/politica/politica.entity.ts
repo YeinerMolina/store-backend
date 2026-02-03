@@ -1,11 +1,3 @@
-/**
- * Politica Aggregate Root
- *
- * Manages policy lifecycle: BORRADOR → VIGENTE → ARCHIVADA.
- * Enforces single active (VIGENTE) policy per type (application layer ensures this).
- * Immutable after creation; state transitions tracked via events.
- */
-
 import { IdGenerator } from '@shared/domain/factories';
 import {
   CrearPoliticaProps,
@@ -29,32 +21,25 @@ export class Politica {
   )[] = [];
 
   /**
-   * Private constructor. Use crear() or desde() factory methods.
+   * Campos con prefijo _ son mutables internamente pero readonly externamente.
    */
   private constructor(
     private readonly id: string,
     private readonly tipo: TipoPolitica,
     private readonly version: string,
     private readonly contenido: string,
-    private estado: EstadoPolitica,
-    private fechaVigenciaDesde: Date | undefined,
-    private fechaVigenciaHasta: Date | undefined,
+    private _estado: EstadoPolitica,
+    private _fechaVigenciaDesde: Date | undefined,
+    private _fechaVigenciaHasta: Date | undefined,
     private readonly publicadoPorId: string | undefined,
     private readonly fechaCreacion: Date,
   ) {
     Object.freeze(this);
   }
 
-  /**
-   * Factory: Create new Politica in BORRADOR state.
-   *
-   * Validates non-empty content.
-   * Emits PoliticaCreada event for auditability.
-   */
   static crear(params: CrearPoliticaProps): Politica {
     const id = IdGenerator.generate();
 
-    // Validar contenido
     if (!params.contenido || params.contenido.trim().length === 0) {
       throw new Error('Contenido de política no puede estar vacío');
     }
@@ -71,17 +56,13 @@ export class Politica {
       new Date(),
     );
 
-    // Emitir evento
     politica.eventos.push(new PoliticaCreada(id, params.tipo, params.version));
 
     return politica;
   }
 
   /**
-   * Factory: Reconstruct from persisted data without emitting events.
-   *
-   * Used by repository when loading from database.
-   * Events are NOT emitted here; only crear() emits.
+   * Reconstituye desde BD sin emitir eventos.
    */
   static desde(data: PoliticaData): Politica {
     return new Politica(
@@ -98,75 +79,55 @@ export class Politica {
   }
 
   /**
-   * Publish policy: BORRADOR → VIGENTE.
-   *
-   * Precondition: state must be BORRADOR.
-   * Emits PoliticaPublicada with effectiveness date.
-   * Note: Application service handles archiving previous policies of same type.
+   * Application service se encarga de archivar políticas anteriores del mismo tipo.
    */
   publicar(params: PublicarPoliticaProps): void {
-    // Precondición: debe estar en BORRADOR
-    if (this.estado !== EstadoPoliticaEnum.BORRADOR) {
+    if (this._estado !== EstadoPoliticaEnum.BORRADOR) {
       throw new Error(
-        `No se puede publicar política en estado ${this.estado}. Solo BORRADOR puede publicarse.`,
+        `No se puede publicar política en estado ${this._estado}. Solo BORRADOR puede publicarse.`,
       );
     }
 
     const ahora = new Date();
-    (this as any).estado = EstadoPoliticaEnum.VIGENTE;
-    (this as any).fechaVigenciaDesde = params.fechaVigenciaDesde || ahora;
+    this._estado = EstadoPoliticaEnum.VIGENTE;
+    this._fechaVigenciaDesde = params.fechaVigenciaDesde || ahora;
 
-    // Emitir evento
     this.eventos.push(
       new PoliticaPublicada(
         this.id,
         this.tipo,
         this.version,
-        this.fechaVigenciaDesde!,
+        this._fechaVigenciaDesde!,
       ),
     );
   }
 
-  /**
-   * Archive policy: any → ARCHIVADA.
-   *
-   * Precondition: state cannot already be ARCHIVADA.
-   * Emits PoliticaArchivada marking end of validity period.
-   */
   archivar(fechaVigenciaHasta?: Date): void {
-    // Precondición: no puede estar ARCHIVADA
-    if (this.estado === EstadoPoliticaEnum.ARCHIVADA) {
+    if (this._estado === EstadoPoliticaEnum.ARCHIVADA) {
       throw new Error(
         'Política ya está ARCHIVADA, no se puede archivar nuevamente.',
       );
     }
 
-    (this as any).estado = EstadoPoliticaEnum.ARCHIVADA;
-    (this as any).fechaVigenciaHasta = fechaVigenciaHasta || new Date();
+    this._estado = EstadoPoliticaEnum.ARCHIVADA;
+    this._fechaVigenciaHasta = fechaVigenciaHasta || new Date();
 
-    // Emitir evento
     this.eventos.push(new PoliticaArchivada(this.id, this.tipo, this.version));
   }
 
   /**
-   * Query: Determine if policy is active (VIGENTE) at given date.
-   *
-   * Checks: state is VIGENTE AND date is within [desde, hasta] range.
-   * Used to validate which policy applies at a specific point in time.
+   * Verifica si política está VIGENTE en la fecha dada (dentro del rango [desde, hasta]).
    */
   estaVigenteEn(fecha: Date = new Date()): boolean {
-    // Debe estar en estado VIGENTE
-    if (this.estado !== EstadoPoliticaEnum.VIGENTE) {
+    if (this._estado !== EstadoPoliticaEnum.VIGENTE) {
       return false;
     }
 
-    // Debe haber iniciado vigencia
-    if (this.fechaVigenciaDesde && fecha < this.fechaVigenciaDesde) {
+    if (this._fechaVigenciaDesde && fecha < this._fechaVigenciaDesde) {
       return false;
     }
 
-    // No debe haber expirado vigencia
-    if (this.fechaVigenciaHasta && fecha >= this.fechaVigenciaHasta) {
+    if (this._fechaVigenciaHasta && fecha >= this._fechaVigenciaHasta) {
       return false;
     }
 
@@ -192,15 +153,15 @@ export class Politica {
   }
 
   getEstado(): EstadoPolitica {
-    return this.estado;
+    return this._estado;
   }
 
   getFechaVigenciaDesde(): Date | undefined {
-    return this.fechaVigenciaDesde;
+    return this._fechaVigenciaDesde;
   }
 
   getFechaVigenciaHasta(): Date | undefined {
-    return this.fechaVigenciaHasta;
+    return this._fechaVigenciaHasta;
   }
 
   getPublicadoPorId(): string | undefined {
@@ -212,16 +173,14 @@ export class Politica {
   }
 
   /**
-   * Returns defensive copy of emitted events.
-   * Caller cannot modify internal state via this reference.
+   * Retorna copia defensiva para prevenir modificación externa.
    */
   getEventos(): (PoliticaCreada | PoliticaPublicada | PoliticaArchivada)[] {
     return [...this.eventos];
   }
 
   /**
-   * Clear events after persistence.
-   * Called by repository after saving to prevent duplicate event handling.
+   * Limpia eventos post-persistencia para prevenir duplicados.
    */
   vaciarEventos(): void {
     (this as any).eventos.length = 0;

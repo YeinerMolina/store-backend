@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { SharedModule } from '../../../shared/shared.module';
 import { InventarioApplicationService } from '../application/services/inventario-application.service';
 import { InventarioPostgresRepository } from './persistence/repositories/inventario-postgres.repository';
 import { PrismaTransactionManager } from './persistence/prisma-transaction-manager';
@@ -14,7 +13,6 @@ import {
   CONFIGURACION_PORT_TOKEN,
 } from '../domain/ports/tokens';
 import { SharedModule } from '@shared/shared.module';
-
 /**
  * Inventario module - complete DDD aggregate with full lifecycle management.
  *
@@ -48,29 +46,9 @@ import { SharedModule } from '@shared/shared.module';
     {
       provide: INVENTARIO_SERVICE_TOKEN,
       useClass: InventarioApplicationService,
-      // useFactory: (
-      //   inventarioRepo,
-      //   eventBus,
-      //   transactionManager,
-      //   configuracionPort,
-      // ) => {
-      //   return new InventarioApplicationService(
-      //     inventarioRepo,
-      //     eventBus,
-      //     transactionManager,
-      //     configuracionPort,
-      //   );
-      // },
-      // inject: [
-      //   INVENTARIO_REPOSITORY_TOKEN,
-      //   EVENT_BUS_PORT_TOKEN,
-      //   TRANSACTION_MANAGER_TOKEN,
-      //   CONFIGURACION_PORT_TOKEN,
-      // ],
     },
   ],
   controllers: [InventarioController],
   exports: [INVENTARIO_SERVICE_TOKEN],
-  imports: [SharedModule],
 })
 export class InventarioModule {}

@@ -47,9 +47,44 @@ Las skills son guías autocontenidas que definen:
 - Schemas de validación HTTP
 - Validación de entrada de controllers
 
-### 3. Code Documenter (`code-documenter/`)
+### 3. Hexagonal Module (`hexagonal-module/`)
 
-**Se activa cuando**: Documentas código, agregas comentarios JSDoc o revisas documentación.
+**Se activa cuando**: Creás un módulo nuevo, agregás archivos a un módulo existente, validás responsabilidades de archivos, o trabajás con puertos, adaptadores, agregados o tokens de DI.
+
+**Patrones clave**:
+
+- Estructura exacta de archivos para cada módulo hexagonal
+- Tabla de decisión: "dónde va este archivo" por capa
+- Reglas de dependencia estrictas (domain -> nada, app -> domain, infra -> domain+app)
+- Convenciones de nombres para puertos, adaptadores, servicios
+- Patrón de agregado DDD (1 agregado = 1 repository)
+- Wiring de DI con tokens Symbol
+- Tres modelos separados (Domain, Prisma, DTO)
+
+**Ejemplos de uso**:
+
+- Iniciar un módulo nuevo desde cero
+- Decidir en qué capa y path crear un archivo
+- Configurar el módulo NestJS con inyección de dependencias
+- Implementar un repositorio con persistencia declarativa
+
+### 4. NestJS Expert (`nestjs-expert/`)
+
+**Se activa cuando**: Trabajás con módulos NestJS, inyección de dependencias, middleware, guards, interceptors, testing o autenticación.
+
+**Patrones clave**:
+
+- Resolución de dependencias y errores comunes
+- Patrones de módulos, providers y exports
+- Testing con Jest/Supertest
+- Autenticación JWT + Passport
+- Decision trees para arquitectura
+
+### 5. Code Comments Policy (Global: `~/.claude/skills/code-comments-policy/`)
+
+**Se activa cuando**: Escribís, editás o generás código en CUALQUIER lenguaje.
+
+**Nota**: Esta skill es GLOBAL, aplica a todos los proyectos. No está en este directorio sino en `~/.claude/skills/code-comments-policy/`.
 
 **Patrones clave**:
 
@@ -88,7 +123,7 @@ const crearVentaSchema = z.object({
   })),
 });
 
-// Al escribir esto → Code Documenter skill se activa
+// Al escribir esto → Code Comments Policy skill se activa
 /**
  * Usa reservas con expiración de 20 minutos para evitar
  * bloqueo de inventario por carritos abandonados.
@@ -106,7 +141,7 @@ Puedes consultar cualquier skill manualmente:
 # Leer skill completa
 cat .claude/skills/typescript/SKILL.md
 cat .claude/skills/zod-4/SKILL.md
-cat .claude/skills/code-documenter/SKILL.md
+cat ~/.claude/skills/code-comments-policy/SKILL.md
 
 # Buscar patrón específico
 rg "Const Types Pattern" .claude/skills/typescript/SKILL.md
@@ -195,7 +230,7 @@ Ver `CLAUDE.md` sección "Skills y Patrones de Código" para documentación comp
 
 - Las skills son **prescriptivas**: definen cómo DEBE escribirse el código
 - Los patrones marcados con ❌ **NO deben usarse** bajo ninguna circunstancia
-- Múltiples skills pueden activarse simultáneamente (ej: TypeScript + Zod + Code Documenter)
+- Múltiples skills pueden activarse simultáneamente (ej: TypeScript + Zod + Code Comments Policy)
 - Las skills son específicas de tecnología, no de dominio de negocio
 
 ---

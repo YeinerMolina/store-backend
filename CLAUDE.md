@@ -561,11 +561,33 @@ Todas las skills están en `.claude/skills/` y se cargan automáticamente cuando
 
 | Skill               | Contexto de Activación                                       | Ubicación                         |
 | ------------------- | ------------------------------------------------------------ | --------------------------------- |
+| **hexagonal-module** | Al crear módulos, agregar archivos, validar capas, puertos, adaptadores, DI | `.claude/skills/hexagonal-module/` |
 | **typescript**      | Al escribir código TypeScript (tipos, interfaces, genéricos) | `.claude/skills/typescript/`      |
 | **zod-4**           | Al trabajar con validaciones Zod (DTOs, schemas)             | `.claude/skills/zod-4/`           |
-| **code-documenter** | Al documentar código o revisar comentarios                   | `.claude/skills/code-documenter/` |
+| **code-comments-policy** | Al escribir, editar o generar código (cualquier lenguaje) | Global: `~/.claude/skills/code-comments-policy/` |
 
 ### Cuándo se Activan las Skills
+
+#### Hexagonal Module Skill
+
+**Se activa cuando**:
+
+- Creás un módulo nuevo o agregás archivos a uno existente
+- Necesitás saber en qué capa/carpeta va un archivo
+- Trabajás con puertos (inbound/outbound), adaptadores o repositorios
+- Configurás inyección de dependencias con tokens Symbol
+- Implementás agregados, factories, eventos de dominio o excepciones
+- Creás mappers entre capas (Domain <-> Prisma, Domain <-> DTO)
+
+**Patrones clave**:
+
+- ✅ Estructura exacta de archivos por módulo hexagonal
+- ✅ Tabla de decisión: "dónde va este archivo" por capa
+- ✅ Reglas de dependencia estrictas (domain → nada, app → domain, infra → domain+app)
+- ✅ Un agregado = un repository (DDD)
+- ✅ Tres modelos separados (Domain, Prisma, DTO)
+- ✅ Convenciones de nombres (sin prefijo "I", sufijos técnicos en adaptadores)
+- ✅ DI tokens como Symbols
 
 #### TypeScript Skill
 
@@ -578,7 +600,8 @@ Todas las skills están en `.claude/skills/` y se cargan automáticamente cuando
 
 **Patrones clave**:
 
-- ✅ Const Types Pattern (crear objeto const primero, luego extraer tipo)
+- ✅ `enum` como primera opción para valores fijos del dominio (estados, roles, categorías)
+- ✅ Const Types Pattern solo como fallback (tipos derivados, lookup tables, template literals)
 - ✅ Interfaces planas (un nivel de profundidad)
 - ✅ NUNCA usar `any`, usar `unknown` + type guards
 - ✅ Utility types (Pick, Omit, Partial, etc.)
@@ -586,16 +609,21 @@ Todas las skills están en `.claude/skills/` y se cargan automáticamente cuando
 **Ejemplo**:
 
 ```typescript
-// ✅ CORRECTO: Const Types Pattern
-const TipoOperacionEnum = {
-  VENTA: 'VENTA',
-  CAMBIO: 'CAMBIO',
-  AJUSTE: 'AJUSTE',
+// ✅ PREFERIDO: enum para valores de dominio
+export enum TipoOperacion {
+  VENTA = 'VENTA',
+  CAMBIO = 'CAMBIO',
+  AJUSTE = 'AJUSTE',
+}
+
+// ✅ FALLBACK: Const Types Pattern cuando enum no puede expresarlo
+const ERROR_CODES = {
+  NOT_FOUND: 404,
+  UNAUTHORIZED: 401,
 } as const;
+type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
 
-type TipoOperacion = (typeof TipoOperacionEnum)[keyof typeof TipoOperacionEnum];
-
-// ❌ INCORRECTO: Direct union type
+// ❌ NUNCA: Union types directos
 type TipoOperacion = 'VENTA' | 'CAMBIO' | 'AJUSTE';
 ```
 
@@ -630,13 +658,13 @@ const schema = z.object({
 });
 ```
 
-#### Code-Documenter Skill
+#### Code-Comments-Policy Skill (Global)
 
 **Se activa cuando**:
 
-- Agregas comentarios JSDoc
-- Revisas o limpias documentación existente
-- Documentas decisiones arquitectónicas en código
+- Escribís, editás o generás código en CUALQUIER lenguaje
+- Agregás comentarios JSDoc
+- Revisás o limpiás documentación existente
 
 **Patrones clave**:
 
@@ -668,6 +696,8 @@ class UUID {}
 userId: string; // ❌ Obvio, no aporta valor
 ```
 
+**Ubicación**: `~/.claude/skills/code-comments-policy/SKILL.md` (global, aplica a todos los proyectos)
+
 ### Cómo Usar las Skills
 
 **Las skills se cargan automáticamente** cuando detectan su contexto. No necesitas hacer nada manualmente.
@@ -681,8 +711,8 @@ cat .claude/skills/typescript/SKILL.md
 # Ver skill de Zod 4
 cat .claude/skills/zod-4/SKILL.md
 
-# Ver skill de documentación
-cat .claude/skills/code-documenter/SKILL.md
+# Ver skill de comentarios (global)
+cat ~/.claude/skills/code-comments-policy/SKILL.md
 ```
 
 ### Agregar Nuevas Skills
@@ -704,7 +734,7 @@ Si necesitas agregar una skill específica para este proyecto (ej: patrones de N
 │   └── SKILL.md
 ├── zod-4/
 │   └── SKILL.md
-├── code-documenter/
+├── nestjs-expert/
 │   └── SKILL.md
 └── nestjs-ddd/          ← Nueva skill
     └── SKILL.md

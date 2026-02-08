@@ -1,13 +1,3 @@
-/**
- * Swagger API Decorators - CONFIGURACIÓN Module
- *
- * Reusable decorators documenting all CONFIGURACIÓN endpoints.
- * Each decorator groups related Swagger annotations for a single endpoint.
- *
- * Pattern: Decorator = Operation + Response + Error responses.
- * Follows OpenAPI 3.0 standard.
- */
-
 import { applyDecorators } from '@nestjs/common';
 import {
   ApiOperation,
@@ -50,13 +40,14 @@ export function ApiCrearParametroOperativo() {
 /**
  * PATCH /configuracion/parametros/:id
  * Update parameter value.
+ * NOTE: modificadoPorId is tracked internally via authentication context.
  */
 export function ApiActualizarParametroOperativo() {
   return applyDecorators(
     ApiOperation({
       summary: 'Actualizar valor de parámetro',
       description:
-        'Actualiza el valor de un parámetro existente. Valida según tipo_dato y rangos.',
+        'Actualiza el valor de un parámetro existente. Valida según tipo_dato y rangos. El usuario que modifica se obtiene del contexto de autenticación.',
     }),
     ApiOkResponse({
       description: 'Parámetro actualizado exitosamente',
@@ -160,20 +151,22 @@ export function ApiCrearPolitica() {
  * PATCH /configuracion/politicas/:id/publicar
  * Publish policy: BORRADOR → VIGENTE.
  * Automatically archives previous VIGENTE policy of same type.
+ * NOTE: publicadoPorId is tracked internally via authentication context.
  */
 export function ApiPublicarPolitica() {
   return applyDecorators(
     ApiOperation({
       summary: 'Publicar política (BORRADOR → VIGENTE)',
       description:
-        'Transiciona política a estado VIGENTE. Automáticamente archiva política anterior del mismo tipo.',
+        'Transiciona política a estado VIGENTE. Automáticamente archiva política anterior del mismo tipo. El usuario que publica se obtiene del contexto de autenticación.',
     }),
     ApiOkResponse({
       description: 'Política publicada exitosamente',
       type: PoliticaResponseDto,
     }),
     ApiBadRequestResponse({
-      description: 'Validación fallida: fecha inválida',
+      description:
+        'Validación fallida: fecha inválida o política no está en estado BORRADOR',
     }),
     ApiNotFoundResponse({
       description: 'Política no encontrada',

@@ -107,40 +107,8 @@ export interface EliminarInventarioProps {
 }
 
 /**
- * Response del dominio: Inventario
- */
-export interface InventarioResponse {
-  readonly id: string;
-  readonly tipoItem: TipoItemEnum;
-  readonly itemId: string;
-  readonly cantidadDisponible: number;
-  readonly cantidadReservada: number;
-  readonly cantidadAbandono: number;
-  readonly ubicacion?: string;
-  readonly version: number;
-  readonly fechaActualizacion: Date;
-}
-
-/**
- * Response del dominio: Reserva
- */
-export interface ReservaResponse {
-  readonly id: string;
-  readonly inventarioId: string;
-  readonly cantidad: number;
-  readonly estado: string;
-  readonly fechaCreacion: Date;
-  readonly fechaExpiracion: Date;
-  readonly fechaResolucion?: Date;
-  readonly tipoOperacion: TipoOperacionEnum;
-  readonly operacionId: string;
-  readonly actorTipo: TipoActorEnum;
-  readonly actorId: string;
-  readonly estaExpirada: boolean;
-}
-
-/**
- * Response del dominio: Disponibilidad
+ * Query result: Disponibilidad
+ * Este NO es una copia del agregado, es un read model computado.
  */
 export interface DisponibilidadResponse {
   readonly disponible: boolean;

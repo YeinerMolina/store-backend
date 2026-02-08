@@ -19,8 +19,6 @@ import type {
   AjustarInventarioCommand,
   ConsultarDisponibilidadProps,
   EliminarInventarioProps,
-  InventarioResponse,
-  ReservaResponse,
   DisponibilidadResponse,
 } from '../../domain/aggregates/inventario/inventario.types';
 import { StockBajoDetectado } from '../../domain/events/stock-bajo-detectado.event';
@@ -58,7 +56,7 @@ export class InventarioApplicationService implements InventarioService {
    */
   async crearInventario(
     props: CrearInventarioConCantidadProps,
-  ): Promise<InventarioResponse> {
+  ): Promise<Inventario> {
     const existente = await this.inventarioRepo.buscarPorItem(
       props.tipoItem,
       props.itemId,
@@ -97,15 +95,12 @@ export class InventarioApplicationService implements InventarioService {
 
     await this.publicarEventosDominio(inventario);
 
-    return this.toInventarioResponse(inventario);
+    return inventario;
   }
 
-  /**
-   * Stock fantasma (ventas sin mercadería) requiere que inventario exista antes de reservar.
-   */
   async reservarInventario(
     command: ReservarInventarioCommand,
-  ): Promise<ReservaResponse> {
+  ): Promise<Reserva> {
     const inventario = await this.inventarioRepo.buscarPorItem(
       command.tipoItem,
       command.itemId,
@@ -138,7 +133,7 @@ export class InventarioApplicationService implements InventarioService {
 
     await this.publicarEventosDominio(inventario);
 
-    return this.toReservaResponse(reserva);
+    return reserva;
   }
 
   /**
@@ -263,7 +258,7 @@ export class InventarioApplicationService implements InventarioService {
   async obtenerInventarioPorItem(
     tipoItem: string,
     itemId: string,
-  ): Promise<InventarioResponse> {
+  ): Promise<Inventario> {
     const inventario = await this.inventarioRepo.buscarPorItem(
       tipoItem,
       itemId,
@@ -273,7 +268,7 @@ export class InventarioApplicationService implements InventarioService {
       throw new EntidadNoEncontradaError('Inventario', `${tipoItem}/${itemId}`);
     }
 
-    return this.toInventarioResponse(inventario);
+    return inventario;
   }
 
   async detectarStockBajo(): Promise<void> {
@@ -412,43 +407,5 @@ export class InventarioApplicationService implements InventarioService {
         : ParametroConfiguracionInventario.DURACION_RESERVA_CAMBIO;
 
     return this.configuracionPort.obtenerParametro(parametro);
-  }
-
-  /**
-   * Maps domain Inventario entity to InventarioResponse (domain type).
-   * Used internally to satisfy InventarioService interface.
-   */
-  private toInventarioResponse(inventario: Inventario): InventarioResponse {
-    return {
-      id: inventario.id,
-      tipoItem: inventario.tipoItem,
-      itemId: inventario.itemId,
-      cantidadDisponible: inventario.cantidadDisponible.obtenerValor(),
-      cantidadReservada: inventario.cantidadReservada.obtenerValor(),
-      cantidadAbandono: inventario.cantidadAbandono.obtenerValor(),
-      ubicacion: inventario.ubicacion,
-      version: inventario.version.obtenerNumero(),
-      fechaActualizacion: inventario.fechaActualizacion,
-    };
-  }
-
-  /**
-   * Maps domain Reserva entity to ReservaResponse (domain type).
-   */
-  private toReservaResponse(reserva: Reserva): ReservaResponse {
-    return {
-      id: reserva.id,
-      inventarioId: reserva.inventarioId,
-      cantidad: reserva.cantidad,
-      estado: reserva.estado,
-      fechaCreacion: reserva.fechaCreacion,
-      fechaExpiracion: reserva.fechaExpiracion.obtenerFecha(),
-      fechaResolucion: reserva.fechaResolucion,
-      tipoOperacion: reserva.tipoOperacion,
-      operacionId: reserva.operacionId,
-      actorTipo: reserva.actorTipo,
-      actorId: reserva.actorId,
-      estaExpirada: reserva.estaExpirada(),
-    };
   }
 }

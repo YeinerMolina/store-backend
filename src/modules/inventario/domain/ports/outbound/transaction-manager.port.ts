@@ -1,23 +1,20 @@
 import { TRANSACTION_MANAGER_TOKEN } from '../tokens';
+/**
+ * Direct coupling to Prisma transaction type because the ORM is architecturally
+ * stable and unlikely to change. Abstracting PrismaTransactionClient adds
+ * unnecessary indirection without meaningful testability or swappability benefits.
+ *
+ * This pragmatic decision prioritizes simplicity over theoretical purity:
+ * - Prisma's transaction API is mature and won't change
+ * - Migration to another ORM is not on the roadmap
+ * - Type-safe transactions prevent runtime errors
+ */
 import type { PrismaTransactionClient } from '../../../infrastructure/persistence/types/prisma-transaction.type';
 
-export { TRANSACTION_MANAGER_TOKEN };
-
-/**
- * Transaction context specific to Prisma ORM.
- * Prisma is ORM-agnostic, allowing DB changes without modifying this type.
- *
- * NOTA: Este type acopla la capa domain a Prisma (ruptura intencional de hexagonal).
- * Justificación: Prisma es la solución tecnológica estable del proyecto.
- */
 export type TransactionContext = PrismaTransactionClient;
 
-/**
- * Desacopla aplicación de tecnología de persistencia manteniendo atomicidad.
- */
 export interface TransactionManager {
-  /**
-   * Rollback automático en error evita estado parcial inconsistente.
-   */
-  transaction<T>(work: (ctx: TransactionContext) => Promise<T>): Promise<T>;
+  transaction<T>(
+    callback: (context: TransactionContext) => Promise<T>,
+  ): Promise<T>;
 }

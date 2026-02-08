@@ -19,7 +19,7 @@ import { ConfiguracionPostgresRepository } from './infrastructure/persistence/co
 import {
   CONFIGURACION_SERVICE_TOKEN,
   CONFIGURACION_REPOSITORY_TOKEN,
-} from './infrastructure/tokens';
+} from './domain/ports/tokens';
 
 /**
  * NestJS Module for CONFIGURACIÓN bounded context.

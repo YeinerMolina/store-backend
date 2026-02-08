@@ -13,12 +13,12 @@ Content-Type: application/json
 {
   "clave": "DURACION_RESERVA_VENTA",
   "nombre": "Duración de Reserva para Ventas",
-  "descripcion": "Tiempo en minutos que se reservan ítems cuando cliente inicia pago online",
-  "tipoDato": "DURACION",
-  "valor": "20",
-  "valorDefecto": "20",
-  "valorMinimo": "5",
-  "valorMaximo": "60",
+  "descripcion": "Tiempo en segundos que se reservan ítems cuando cliente inicia pago online (1200s = 20min)",
+  "tipoDato": "ENTERO",
+  "valor": "1200",
+  "valorDefecto": "1200",
+  "valorMinimo": "300",
+  "valorMaximo": "3600",
   "requiereReinicio": false
 }
 ```
@@ -30,12 +30,12 @@ Content-Type: application/json
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "clave": "DURACION_RESERVA_VENTA",
   "nombre": "Duración de Reserva para Ventas",
-  "descripcion": "Tiempo en minutos que se reservan ítems cuando cliente inicia pago online",
-  "tipoDato": "DURACION",
-  "valor": "20",
-  "valorDefecto": "20",
-  "valorMinimo": "5",
-  "valorMaximo": "60",
+  "descripcion": "Tiempo en segundos que se reservan ítems cuando cliente inicia pago online (1200s = 20min)",
+  "tipoDato": "ENTERO",
+  "valor": "1200",
+  "valorDefecto": "1200",
+  "valorMinimo": "300",
+  "valorMaximo": "3600",
   "requiereReinicio": false,
   "modificadoPorId": null,
   "fechaModificacion": "2026-02-02T21:30:00.000Z",
@@ -50,8 +50,7 @@ PATCH /configuracion/parametros/550e8400-e29b-41d4-a716-446655440000
 Content-Type: application/json
 
 {
-  "valor": "25",
-  "modificadoPorId": "660e8400-e29b-41d4-a716-446655440001"
+  "valor": "1500"
 }
 ```
 
@@ -62,14 +61,16 @@ Content-Type: application/json
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "clave": "DURACION_RESERVA_VENTA",
   "nombre": "Duración de Reserva para Ventas",
-  "tipoDato": "DURACION",
-  "valor": "25",
-  "valorDefecto": "20",
-  "valorMinimo": "5",
-  "valorMaximo": "60",
+  "descripcion": "Tiempo en segundos que se reservan ítems cuando cliente inicia pago online (1200s = 20min)",
+  "tipoDato": "ENTERO",
+  "valor": "1500",
+  "valorDefecto": "1200",
+  "valorMinimo": "300",
+  "valorMaximo": "3600",
   "requiereReinicio": false,
-  "modificadoPorId": "660e8400-e29b-41d4-a716-446655440001",
-  "fechaModificacion": "2026-02-02T22:00:00.000Z"
+  "modificadoPorId": null,
+  "fechaModificacion": "2026-02-02T22:00:00.000Z",
+  "fechaCreacion": "2026-02-02T21:30:00.000Z"
 }
 ```
 
@@ -86,14 +87,16 @@ GET /configuracion/parametros/550e8400-e29b-41d4-a716-446655440000
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "clave": "DURACION_RESERVA_VENTA",
   "nombre": "Duración de Reserva para Ventas",
-  "tipoDato": "DURACION",
-  "valor": "25",
-  "valorDefecto": "20",
-  "valorMinimo": "5",
-  "valorMaximo": "60",
+  "descripcion": "Tiempo en segundos que se reservan ítems cuando cliente inicia pago online (1200s = 20min)",
+  "tipoDato": "ENTERO",
+  "valor": "1200",
+  "valorDefecto": "1200",
+  "valorMinimo": "300",
+  "valorMaximo": "3600",
   "requiereReinicio": false,
-  "modificadoPorId": "660e8400-e29b-41d4-a716-446655440001",
-  "fechaModificacion": "2026-02-02T22:00:00.000Z"
+  "modificadoPorId": null,
+  "fechaModificacion": "2026-02-02T21:30:00.000Z",
+  "fechaCreacion": "2026-02-02T21:30:00.000Z"
 }
 ```
 
@@ -135,19 +138,22 @@ GET /configuracion/parametros
     "id": "550e8400-e29b-41d4-a716-446655440000",
     "clave": "DURACION_RESERVA_VENTA",
     "nombre": "Duración de Reserva para Ventas",
-    "tipoDato": "DURACION",
-    "valor": "25",
-    "valorDefecto": "20",
-    "valorMinimo": "5",
-    "valorMaximo": "60",
+    "descripcion": "Tiempo en segundos que se reservan ítems cuando cliente inicia pago online (1200s = 20min)",
+    "tipoDato": "ENTERO",
+    "valor": "1200",
+    "valorDefecto": "1200",
+    "valorMinimo": "300",
+    "valorMaximo": "3600",
     "requiereReinicio": false,
     "modificadoPorId": null,
-    "fechaModificacion": "2026-02-02T21:30:00.000Z"
+    "fechaModificacion": "2026-02-02T21:30:00.000Z",
+    "fechaCreacion": "2026-02-02T21:30:00.000Z"
   },
   {
     "id": "550e8400-e29b-41d4-a716-446655440001",
     "clave": "UMBRAL_STOCK_BAJO",
     "nombre": "Umbral de Stock Bajo",
+    "descripcion": "Cantidad mínima de unidades antes de enviar notificación de stock bajo",
     "tipoDato": "ENTERO",
     "valor": "10",
     "valorDefecto": "10",
@@ -155,7 +161,8 @@ GET /configuracion/parametros
     "valorMaximo": "1000",
     "requiereReinicio": false,
     "modificadoPorId": null,
-    "fechaModificacion": "2026-02-02T21:30:00.000Z"
+    "fechaModificacion": "2026-02-02T21:30:00.000Z",
+    "fechaCreacion": "2026-02-02T21:30:00.000Z"
   }
 ]
 ```
@@ -375,11 +382,13 @@ curl -X POST http://localhost:3000/api/configuracion/parametros \
   -d '{
     "clave": "DURACION_RESERVA_VENTA",
     "nombre": "Duración de Reserva para Ventas",
-    "tipoDato": "DURACION",
-    "valor": "20",
-    "valorDefecto": "20",
-    "valorMinimo": "5",
-    "valorMaximo": "60"
+    "descripcion": "Tiempo en segundos que se reservan ítems cuando cliente inicia pago online (1200s = 20min)",
+    "tipoDato": "ENTERO",
+    "valor": "1200",
+    "valorDefecto": "1200",
+    "valorMinimo": "300",
+    "valorMaximo": "3600",
+    "requiereReinicio": false
   }'
 ```
 

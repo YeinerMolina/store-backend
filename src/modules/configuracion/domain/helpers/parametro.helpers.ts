@@ -1,16 +1,5 @@
 import { TipoDatoEnum } from '../aggregates/configuracion.types';
 
-/**
- * Parsea el valor string de un parámetro operativo a su tipo nativo.
- *
- * Uso en otros módulos:
- * ```ts
- * const parametro = await configuracionPort.obtenerParametro('DURACION_RESERVA_VENTA');
- * const segundos = parseParametroValor(parametro.valor, parametro.tipoDato) as number;
- * ```
- *
- * @throws Error si el valor no puede ser parseado según el tipo
- */
 export function parseParametroValor(
   valor: string,
   tipoDato: TipoDatoEnum,

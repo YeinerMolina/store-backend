@@ -1,14 +1,3 @@
-/**
- * CONFIGURACIÓN Controller - HTTP Endpoints
- *
- * REST API for managing operational parameters and policies.
- * All endpoints validate input with Zod schemas before passing to services.
- * Swagger documentation applied via decorators for OpenAPI compliance.
- *
- * Authentication: Required for all endpoints (guards applied at module level).
- * Authorization: Checked in application service layer.
- */
-
 import {
   Controller,
   Post,
@@ -26,7 +15,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { ValidateWith } from '@shared/decorators/validate-with.decorator';
 import type { ConfiguracionService } from '../../domain/ports/inbound/configuracion.service';
 import { TipoPoliticaEnum } from '../../domain/aggregates/configuracion.types';
-import { CONFIGURACION_SERVICE_TOKEN } from '../tokens';
+import { CONFIGURACION_SERVICE_TOKEN } from '../../domain/ports/tokens';
 import {
   CrearParametroOperativoSchema,
   ActualizarParametroOperativoSchema,
@@ -43,7 +32,8 @@ import {
   ParametroOperativoResponseDto,
   PoliticaResponseDto,
 } from '../../application/dto/configuracion-response.dto';
-import { ConfiguracionMapper } from '../../application/mappers/configuracion.mapper';
+import { ConfiguracionRequestMapper } from '../../application/mappers/configuracion-request.mapper';
+import { ConfiguracionResponseMapper } from '../../application/mappers/configuracion-response.mapper';
 import {
   ApiCrearParametroOperativo,
   ApiActualizarParametroOperativo,
@@ -57,17 +47,6 @@ import {
   ApiListarPoliticas,
 } from '../../docs/decorators/api-configuracion.decorator';
 
-/**
- * HTTP Controller for CONFIGURACIÓN module.
- *
- * Responsible for:
- * - Route mapping
- * - Request validation (via @ValidateWith)
- * - DTO → Domain Props mapping
- * - Domain Data → DTO mapping
- * - HTTP status codes
- * - Swagger documentation
- */
 @Controller('configuracion')
 @ApiTags('Configuración')
 export class ConfiguracionController {
@@ -76,12 +55,6 @@ export class ConfiguracionController {
     private readonly configuracionService: ConfiguracionService,
   ) {}
 
-  // ========================== PARÁMETROS OPERATIVOS ==========================
-
-  /**
-   * POST /configuracion/parametros
-   * Create new operating parameter.
-   */
   @Post('parametros')
   @ValidateWith(CrearParametroOperativoSchema)
   @HttpCode(HttpStatus.CREATED)
@@ -89,15 +62,12 @@ export class ConfiguracionController {
   async crearParametro(
     @Body() request: CrearParametroOperativoRequestDto,
   ): Promise<ParametroOperativoResponseDto> {
-    const props = ConfiguracionMapper.crearRequestToProps(request);
-    const data = await this.configuracionService.crearParametroOperativo(props);
-    return ConfiguracionMapper.parametroToResponseDto(data);
+    const props = ConfiguracionRequestMapper.toCrearParametroProps(request);
+    const parametro =
+      await this.configuracionService.crearParametroOperativo(props);
+    return ConfiguracionResponseMapper.toParametroResponseDto(parametro);
   }
 
-  /**
-   * PATCH /configuracion/parametros/:id
-   * Update parameter value.
-   */
   @Patch('parametros/:id')
   @ValidateWith(ActualizarParametroOperativoSchema)
   @ApiActualizarParametroOperativo()
@@ -105,66 +75,50 @@ export class ConfiguracionController {
     @Param('id') id: string,
     @Body() request: ActualizarParametroOperativoRequestDto,
   ): Promise<ParametroOperativoResponseDto> {
-    const props = ConfiguracionMapper.actualizarRequestToProps(request);
-    const data = await this.configuracionService.actualizarParametroOperativo(
-      id,
-      props,
+    const props = ConfiguracionRequestMapper.toActualizarParametroProps(
+      request,
+      '-1',
     );
-    return ConfiguracionMapper.parametroToResponseDto(data);
+    const parametro =
+      await this.configuracionService.actualizarParametroOperativo(id, props);
+    return ConfiguracionResponseMapper.toParametroResponseDto(parametro);
   }
 
-  /**
-   * GET /configuracion/parametros/:id
-   * Get parameter by ID.
-   */
   @Get('parametros/:id')
   @ApiObtenerParametroOperativo()
   async obtenerParametro(
     @Param('id') id: string,
   ): Promise<ParametroOperativoResponseDto> {
-    const data = await this.configuracionService.obtenerParametroOperativo(id);
-    if (!data) {
+    const parametro =
+      await this.configuracionService.obtenerParametroOperativo(id);
+    if (!parametro) {
       throw new NotFoundException('Parámetro no encontrado');
     }
-    return ConfiguracionMapper.parametroToResponseDto(data);
+    return ConfiguracionResponseMapper.toParametroResponseDto(parametro);
   }
 
-  /**
-   * GET /configuracion/parametros/clave/:clave
-   * Get parameter by natural business identifier (clave).
-   *
-   * This is the primary lookup method. Route order matters: must come before /:id
-   */
   @Get('parametros/clave/:clave')
   @ApiObtenerParametroPorClave()
   async obtenerParametroPorClave(
     @Param('clave') clave: string,
   ): Promise<ParametroOperativoResponseDto> {
-    const data =
+    const parametro =
       await this.configuracionService.obtenerParametroPorClave(clave);
-    if (!data) {
+    if (!parametro) {
       throw new NotFoundException(`Parámetro con clave ${clave} no encontrado`);
     }
-    return ConfiguracionMapper.parametroToResponseDto(data);
+    return ConfiguracionResponseMapper.toParametroResponseDto(parametro);
   }
 
-  /**
-   * GET /configuracion/parametros
-   * List all parameters without pagination.
-   */
   @Get('parametros')
   @ApiListarParametros()
   async listarParametros(): Promise<ParametroOperativoResponseDto[]> {
-    const data = await this.configuracionService.listarParametros();
-    return data.map((d) => ConfiguracionMapper.parametroToResponseDto(d));
+    const parametros = await this.configuracionService.listarParametros();
+    return parametros.map((p) =>
+      ConfiguracionResponseMapper.toParametroResponseDto(p),
+    );
   }
 
-  // ========================== POLÍTICAS ==========================
-
-  /**
-   * POST /configuracion/politicas
-   * Create new policy in BORRADOR state.
-   */
   @Post('politicas')
   @ValidateWith(CrearPoliticaSchema)
   @HttpCode(HttpStatus.CREATED)
@@ -172,16 +126,14 @@ export class ConfiguracionController {
   async crearPolitica(
     @Body() request: CrearPoliticaRequestDto,
   ): Promise<PoliticaResponseDto> {
-    const props = ConfiguracionMapper.crearPoliticaRequestToProps(request);
-    const data = await this.configuracionService.crearPolitica(props);
-    return ConfiguracionMapper.politicaToResponseDto(data);
+    const props = ConfiguracionRequestMapper.toCrearPoliticaProps(
+      request,
+      '-1',
+    );
+    const politica = await this.configuracionService.crearPolitica(props);
+    return ConfiguracionResponseMapper.toPoliticaResponseDto(politica);
   }
 
-  /**
-   * PATCH /configuracion/politicas/:id/publicar
-   * Publish policy: BORRADOR → VIGENTE.
-   * Automatically archives previous VIGENTE policy of same type.
-   */
   @Patch('politicas/:id/publicar')
   @ValidateWith(PublicarPoliticaSchema)
   @ApiPublicarPolitica()
@@ -189,64 +141,52 @@ export class ConfiguracionController {
     @Param('id') id: string,
     @Body() request: PublicarPoliticaRequestDto,
   ): Promise<PoliticaResponseDto> {
-    const props = ConfiguracionMapper.publicarRequestToProps(request);
-    const data = await this.configuracionService.publicarPolitica(id, props);
-    return ConfiguracionMapper.politicaToResponseDto(data);
+    const props = ConfiguracionRequestMapper.toPublicarPoliticaProps(
+      request,
+      '-1',
+    );
+    const politica = await this.configuracionService.publicarPolitica(
+      id,
+      props,
+    );
+    return ConfiguracionResponseMapper.toPoliticaResponseDto(politica);
   }
 
-  /**
-   * GET /configuracion/politicas/:id
-   * Get policy by ID.
-   */
   @Get('politicas/:id')
   @ApiObtenerPolitica()
   async obtenerPolitica(@Param('id') id: string): Promise<PoliticaResponseDto> {
-    // Note: Currently no direct get-by-id endpoint in service
-    // This would need to be added to listarPoliticas with filtering
-    // For now, return from listar and find first match
-    const data = await this.configuracionService.listarPoliticas();
-    const politica = data.find((p) => p.id === id);
+    const politicas = await this.configuracionService.listarPoliticas();
+    const politica = politicas.find((p) => p.id === id);
     if (!politica) {
       throw new NotFoundException('Política no encontrada');
     }
-    return ConfiguracionMapper.politicaToResponseDto(politica);
+    return ConfiguracionResponseMapper.toPoliticaResponseDto(politica);
   }
 
-  /**
-   * GET /configuracion/politicas/vigente/:tipo
-   * Get currently active (VIGENTE) policy for given type.
-   *
-   * Route order: must come before /:id
-   */
   @Get('politicas/vigente/:tipo')
   @ApiObtenerPoliticaVigente()
   async obtenerPoliticaVigente(
     @Param('tipo') tipo: string,
   ): Promise<PoliticaResponseDto> {
-    const data = await this.configuracionService.obtenerPoliticaVigente(
+    const politica = await this.configuracionService.obtenerPoliticaVigente(
       tipo as TipoPoliticaEnum,
     );
-    if (!data) {
+    if (!politica) {
       throw new NotFoundException(`No hay política vigente de tipo ${tipo}`);
     }
-    return ConfiguracionMapper.politicaToResponseDto(data);
+    return ConfiguracionResponseMapper.toPoliticaResponseDto(politica);
   }
 
-  /**
-   * GET /configuracion/politicas
-   * List all policies (optional type filter).
-   *
-   * Query params:
-   * - tipo: (optional) Filter by CAMBIOS | ENVIOS | TERMINOS
-   */
   @Get('politicas')
   @ApiListarPoliticas()
   async listarPoliticas(
     @Query('tipo') tipo?: string,
   ): Promise<PoliticaResponseDto[]> {
-    const data = await this.configuracionService.listarPoliticas(
+    const politicas = await this.configuracionService.listarPoliticas(
       tipo as TipoPoliticaEnum | undefined,
     );
-    return data.map((d) => ConfiguracionMapper.politicaToResponseDto(d));
+    return politicas.map((p) =>
+      ConfiguracionResponseMapper.toPoliticaResponseDto(p),
+    );
   }
 }

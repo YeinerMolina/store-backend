@@ -5,10 +5,10 @@ import type {
   AjustarInventarioCommand,
   ConsultarDisponibilidadProps,
   EliminarInventarioProps,
-  InventarioResponse,
-  ReservaResponse,
   DisponibilidadResponse,
 } from '../../aggregates/inventario/inventario.types';
+import type { Inventario } from '../../aggregates/inventario/inventario.entity';
+import type { Reserva } from '../../aggregates/inventario/reserva.entity';
 import { INVENTARIO_SERVICE_TOKEN } from '../tokens';
 
 export { INVENTARIO_SERVICE_TOKEN };
@@ -17,27 +17,23 @@ export { INVENTARIO_SERVICE_TOKEN };
  * Puerto inbound para el módulo INVENTARIO.
  * Define casos de uso usando Commands/Props del dominio (no DTOs de application).
  *
- * Decisión arquitectónica: Este puerto usa tipos del DOMINIO, permitiendo que
- * la lógica de negocio sea independiente de HTTP/GraphQL/gRPC. El Application Service
- * mapea DTOs → Commands del dominio antes de llamar estos métodos.
+ * Decisión arquitectónica: Este puerto devuelve AGREGADOS del dominio,
+ * manteniendo la capa de aplicación independiente de detalles de infraestructura.
+ * Los controllers (infrastructure) son responsables de mapear agregados → DTOs HTTP.
  */
 export interface InventarioService {
   /**
    * @throws EntidadDuplicadaError
    * @throws PermisoInsuficienteError
    */
-  crearInventario(
-    props: CrearInventarioConCantidadProps,
-  ): Promise<InventarioResponse>;
+  crearInventario(props: CrearInventarioConCantidadProps): Promise<Inventario>;
 
   /**
    * @throws EntidadNoEncontradaError
    * @throws StockInsuficienteError
    * @throws OptimisticLockingError
    */
-  reservarInventario(
-    command: ReservarInventarioCommand,
-  ): Promise<ReservaResponse>;
+  reservarInventario(command: ReservarInventarioCommand): Promise<Reserva>;
 
   /**
    * @throws EntidadNoEncontradaError
@@ -64,7 +60,7 @@ export interface InventarioService {
   obtenerInventarioPorItem(
     tipoItem: string,
     itemId: string,
-  ): Promise<InventarioResponse>;
+  ): Promise<Inventario>;
 
   detectarStockBajo(): Promise<void>;
 

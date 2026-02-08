@@ -1,47 +1,36 @@
 import {
   CrearParametroOperativoProps,
   ActualizarParametroOperativoProps,
-  ParametroOperativoData,
   CrearPoliticaProps,
   PublicarPoliticaProps,
-  PoliticaData,
   TipoPoliticaEnum,
 } from '../../aggregates/configuracion.types';
+import { ParametroOperativo } from '../../aggregates/parametro-operativo/parametro-operativo.entity';
+import { Politica } from '../../aggregates/politica/politica.entity';
 
 export interface ConfiguracionService {
   crearParametroOperativo(
     params: CrearParametroOperativoProps,
-  ): Promise<ParametroOperativoData>;
+  ): Promise<ParametroOperativo>;
 
   actualizarParametroOperativo(
     id: string,
     params: ActualizarParametroOperativoProps,
-  ): Promise<ParametroOperativoData>;
+  ): Promise<ParametroOperativo>;
 
-  obtenerParametroOperativo(id: string): Promise<ParametroOperativoData | null>;
+  obtenerParametroOperativo(id: string): Promise<ParametroOperativo | null>;
 
-  /**
-   * Búsqueda principal por clave (identificador de negocio).
-   */
-  obtenerParametroPorClave(
-    clave: string,
-  ): Promise<ParametroOperativoData | null>;
+  obtenerParametroPorClave(clave: string): Promise<ParametroOperativo | null>;
 
-  listarParametros(): Promise<ParametroOperativoData[]>;
+  listarParametros(): Promise<ParametroOperativo[]>;
 
-  /**
-   * Crea política en estado BORRADOR (publicar después).
-   */
-  crearPolitica(params: CrearPoliticaProps): Promise<PoliticaData>;
+  crearPolitica(params: CrearPoliticaProps): Promise<Politica>;
 
-  /**
-   * Archiva automáticamente políticas anteriores del mismo tipo.
-   */
   publicarPolitica(
     politicaId: string,
     params: PublicarPoliticaProps,
-  ): Promise<PoliticaData>;
+  ): Promise<Politica>;
 
-  obtenerPoliticaVigente(tipo: TipoPoliticaEnum): Promise<PoliticaData | null>;
-  listarPoliticas(tipo?: TipoPoliticaEnum): Promise<PoliticaData[]>;
+  obtenerPoliticaVigente(tipo: TipoPoliticaEnum): Promise<Politica | null>;
+  listarPoliticas(tipo?: TipoPoliticaEnum): Promise<Politica[]>;
 }

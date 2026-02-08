@@ -1,8 +1,6 @@
-import { IdGenerator } from '@shared/domain/factories';
 import {
   CrearPoliticaProps,
   EstadoPoliticaEnum,
-  PoliticaData,
   PoliticaEvento,
   PublicarPoliticaProps,
   TipoPoliticaEnum,
@@ -11,7 +9,8 @@ import {
   PoliticaArchivada,
   PoliticaCreada,
   PoliticaPublicada,
-} from '../../events/configuracion.events';
+} from '../../events';
+import type { PoliticaData } from './politica.types';
 
 export class Politica {
   readonly #id: string;
@@ -23,7 +22,7 @@ export class Politica {
   #fechaVigenciaHasta: Date | undefined;
   readonly #publicadoPorId: string | undefined;
   readonly #fechaCreacion: Date;
-  readonly #eventos: PoliticaEvento[] = [];
+  #eventos: PoliticaEvento[] = [];
 
   get id(): string {
     return this.#id;
@@ -45,6 +44,14 @@ export class Politica {
     return this.#estado;
   }
 
+  get fechaCreacion(): Date {
+    return this.#fechaCreacion;
+  }
+
+  get eventos(): PoliticaEvento[] {
+    return [...this.#eventos];
+  }
+
   get fechaVigenciaDesde(): Date | undefined {
     return this.#fechaVigenciaDesde;
   }
@@ -55,14 +62,6 @@ export class Politica {
 
   get publicadoPorId(): string | undefined {
     return this.#publicadoPorId;
-  }
-
-  get fechaCreacion(): Date {
-    return this.#fechaCreacion;
-  }
-
-  get eventos(): PoliticaEvento[] {
-    return [...this.#eventos];
   }
 
   private constructor(props: PoliticaData) {
@@ -77,9 +76,7 @@ export class Politica {
     this.#fechaCreacion = props.fechaCreacion;
   }
 
-  static crear(params: CrearPoliticaProps): Politica {
-    const id = IdGenerator.generate();
-
+  static crear(id: string, params: CrearPoliticaProps): Politica {
     if (!params.contenido || params.contenido.trim().length === 0) {
       throw new Error('Contenido de política no puede estar vacío');
     }
@@ -158,6 +155,6 @@ export class Politica {
   }
 
   vaciarEventos(): void {
-    this.#eventos.length = 0;
+    this.#eventos = [];
   }
 }

@@ -125,28 +125,23 @@ Envío asíncrono
 
 ## Convenciones y Estándares del Proyecto
 
-### Estructura de Módulos (Hexagonal Architecture)
+### Arquitectura Hexagonal
 
-Cada módulo sigue la arquitectura hexagonal con tres capas claramente delimitadas:
+Este proyecto sigue **Arquitectura Hexagonal (Ports & Adapters)** combinada con **Domain-Driven Design (DDD)**.
 
-```
-src/modules/{MODULO}/
-├── domain/                     ← NÚCLEO HEXAGONAL (sin dependencias externas)
-│   ├── aggregates/            ← Entidades raíz y sus entidades hijas
-│   ├── value-objects/         ← Objetos de valor inmutables
-│   ├── ports/                 ← Interfaces que definen contratos
-│   │   ├── inbound/          ← Puertos de entrada (casos de uso)
-│   │   └── outbound/         ← Puertos de salida (repositorios, servicios externos)
-│   └── events/               ← Eventos de dominio
-├── application/               ← CAPA DE APLICACIÓN (orquestación)
-│   ├── services/             ← Implementación de casos de uso (puertos inbound)
-│   ├── dto/                  ← Objetos de transferencia de datos
-│   └── mappers/              ← Transformación entre capas
-└── infrastructure/            ← ADAPTADORES (implementaciones concretas)
-    ├── persistence/          ← Repositorios (Prisma), mappers de persistencia
-    ├── adapters/             ← Adaptadores a otros módulos/servicios
-    └── controllers/          ← Controladores HTTP (NestJS)
-```
+**📖 LEER**: `docs/arquitectura/CLAUDE_ARQUITECTURA.md` - **Índice completo de arquitectura**
+
+Este índice te guiará a la documentación específica según tu necesidad:
+
+- Estructura de módulos (domain, application, infrastructure)
+- Reglas de dependencia hexagonal
+- Puertos y adaptadores
+- Agregados DDD
+- Convenciones de nombres
+- Inyección de dependencias con NestJS
+- Patrones de testing
+- Decoradores personalizados
+- Ejemplos visuales y flujos completos
 
 **Documentación por Módulo**:
 
@@ -154,78 +149,6 @@ src/modules/{MODULO}/
 2. **`{MODULO}_ENTITIES_CLAUDE.md`**: Entidades de base de datos con sus campos y relaciones
 
 **IMPORTANTE**: Cada archivo es AUTOCONTENIDO. Un agente que lea solo ese archivo debe poder implementar el módulo completo sin ambigüedades.
-
-### Reglas de Dependencia Hexagonal
-
-```
-PERMITIDO:
-  domain/        → [NADA] (sin dependencias externas)
-  application/   → domain/
-  infrastructure/ → domain/ + application/
-
-PROHIBIDO:
-  domain/        → application/ ❌
-  domain/        → infrastructure/ ❌
-  application/   → infrastructure/ ❌
-```
-
-**Inyección de Dependencias**: Las implementaciones concretas (infrastructure) se inyectan en tiempo de ejecución a través de los puertos (domain/ports).
-
-### Convenciones de Nombres (Puertos y Adaptadores)
-
-**Puertos (Interfaces):**
-
-- **NO usar prefijo "I"** (convención C#/Java antigua)
-- Nombres descriptivos del concepto de dominio
-- Ejemplos:
-  - `VentaRepository` (no `IVentaRepository`)
-  - `InventarioPort` (no `IInventarioPort`)
-  - `VentaService` (no `IVentaService`)
-
-**Adaptadores (Implementaciones):**
-
-- Sufijo técnico que indique la tecnología o protocolo
-- Ejemplos:
-  - `VentaRepositoryPostgres` (implementa `VentaRepository`)
-  - `VentaRepositoryMongo` (otra implementación)
-  - `InventarioHttpAdapter` (implementa `InventarioPort` vía HTTP)
-  - `InventarioEventAdapter` (implementa `InventarioPort` vía eventos)
-  - `EventBusRedisAdapter` (implementa `EventBusPort` con Redis)
-
-**Application Services:**
-
-- Sufijo `ApplicationService` para diferenciar de la interfaz
-- Ejemplo: `VentaApplicationService` (implementa `VentaService`)
-
-**Ver**: `CONVENCIONES_NOMBRES.md` para detalles completos.
-
-### Types del Dominio vs DTOs de Aplicación
-
-**Types del Dominio** (`domain/aggregates/{entidad}/{entidad}.types.ts`):
-
-- Interfaces para métodos del dominio (Props, Data para reconstrucción)
-- Usados SOLO dentro del dominio
-- Tipos estrictos con enums del dominio
-- Ejemplo: `ReservarInventarioProps` usa `TipoOperacionEnum`
-
-**DTOs de Aplicación** (`application/dto/{operacion}.dto.ts`):
-
-- Contratos de entrada/salida HTTP/GraphQL
-- Tipos primitivos (strings, numbers)
-- Se mapean a Types del dominio en la capa de aplicación
-- Ejemplo: `ReservarInventarioRequestDto` usa `string` para tipo de operación
-
-```typescript
-// domain/aggregates/inventario/inventario.types.ts
-export interface ReservarInventarioProps {
-  tipoOperacion: TipoOperacionEnum; // ← Enum del dominio
-}
-
-// application/dto/reservar-inventario-request.dto.ts
-export class ReservarInventarioRequestDto {
-  tipoOperacion: string; // ← String primitivo desde HTTP
-}
-```
 
 ### Nomenclatura de Entidades de Base de Datos
 
@@ -238,22 +161,9 @@ export class ReservarInventarioRequestDto {
 
 Este proyecto utiliza **UUID v7** (RFC 9562) en lugar de UUID v4 para todos los identificadores.
 
-**Razón**: UUID v7 está ordenado temporalmente, lo que reduce fragmentación en índices PostgreSQL y mejora el rendimiento de escritura un 28% en comparación con UUID v4.
+**Razón**: UUID v7 está ordenado temporalmente, mejorando rendimiento de escritura un 28% vs UUID v4.
 
-**Cómo generar IDs**:
-
-```typescript
-// Opción 1: Factory simple (recomendado para la mayoría de casos)
-import { IdGenerator } from '@shared/domain/factories';
-const id = IdGenerator.generate(); // string
-
-// Opción 2: Value Object completo (para dominio rico)
-import { UUID } from '@shared/domain/value-objects';
-const uuid = UUID.generate(); // objeto inmutable
-const id = uuid.toString();
-```
-
-**Para crear agregados**, usar Factories:
+**Crear agregados**: Usar Factories que generan UUID v7 automáticamente
 
 ```typescript
 import { InventarioFactory } from '@inventario/domain/factories';
@@ -265,13 +175,7 @@ const inventario = InventarioFactory.crear({
 // El ID se genera automáticamente como UUID v7
 ```
 
-**NUNCA usar**:
-
-- ❌ `crypto.randomUUID()` (genera UUID v4)
-- ❌ `Math.random()` (no es UUID)
-- ❌ Métodos `.crear()` estáticos en entidades (usar Factories)
-
-**Documentación completa**: [UUID v7 Guide](docs/patrones/UUID_V7_GUIDE.md)
+**📖 Documentación completa**: `docs/patrones/UUID_V7_GUIDE.md`
 
 ### Estados y Enums
 
@@ -746,22 +650,19 @@ Si necesitas agregar una skill específica para este proyecto (ej: patrones de N
 
 ### 1. **Entender la Arquitectura Hexagonal**
 
-**LEER PRIMERO**: `docs/arquitectura/ARQUITECTURA_HEXAGONAL.md`  
-Este documento explica:
+**LEER PRIMERO**: `docs/arquitectura/CLAUDE_ARQUITECTURA.md` - Índice y guía rápida de arquitectura
 
-- Estructura de cada módulo (domain, application, infrastructure)
-- Flujo de dependencias (siempre hacia adentro)
-- Puertos inbound vs outbound
-- Agregados DDD
-- Inyección de dependencias con NestJS
-- Testing en hexagonal
-- Ejemplos completos
+Este documento te guía a la documentación específica según tu necesidad:
 
-Convenciones de nombres para puertos y adaptadores:
+- **ARQUITECTURA_HEXAGONAL.md**: Guía completa con estructura de módulos, puertos, adaptadores, agregados DDD, inyección de dependencias, testing y patrones de código
+- **ARQUITECTURA_DIAGRAMA.md**: Visualizaciones ASCII de flujos de datos, dependencias entre módulos, hexágono completo
+- **DECORADORES_PERSONALIZADOS.md**: Guía de decoradores NestJS personalizados (`@ValidateWith`, `@RequireRole`, etc.)
+
+**Convenciones de nombres** para puertos y adaptadores:
 
 - Sin prefijo "I" en interfaces
-- Sufijos técnicos en implementaciones
-- Patrones y ejemplos completos
+- Sufijos técnicos en implementaciones (ej: `VentaPostgresRepository`, `InventarioHttpAdapter`)
+- Patrones y ejemplos completos en la documentación
 
 ### 2. **Explorar el Módulo de Ejemplo**
 
@@ -862,8 +763,18 @@ http://localhost:3000/api/docs
 
 ## Referencias Internas
 
+### Arquitectura
+
+- **Índice de Arquitectura**: `docs/arquitectura/CLAUDE_ARQUITECTURA.md` (⭐ punto de entrada)
+- **Arquitectura Hexagonal Completa**: `docs/arquitectura/ARQUITECTURA_HEXAGONAL.md`
+- **Diagramas Visuales**: `docs/arquitectura/ARQUITECTURA_DIAGRAMA.md`
+- **Decoradores Personalizados**: `docs/arquitectura/DECORADORES_PERSONALIZADOS.md`
+
+### Persistencia y Patrones
+
 - **Diseño de Persistencia Completo**: `docs/persistencia/diseno_persistencia_backend_v2.md`
 - **Diagrama de Base de Datos**: `tienda_retail_dbdiagram_v2.md`
+- **Guía UUID v7**: `docs/patrones/UUID_V7_GUIDE.md`
 - **Guía de Integración Swagger**: `docs/patrones/SWAGGER_INTEGRATION_GUIDE.md`
 
 ---

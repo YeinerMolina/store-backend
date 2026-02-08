@@ -43,16 +43,16 @@ A **configurable parameter** that controls system behavior without code recompil
 **Key Properties:**
 
 - `clave` (string, UNIQUE): Business identifier (e.g., `DURACION_RESERVA_VENTA`)
-- `tipoDato` (enum): Validation type - ENTERO, DECIMAL, BOOLEAN, TEXTO, DURACION
+- `tipoDato` (enum): Validation type - ENTERO, DECIMAL, BOOLEAN
 - `valor` (string): Current value (validated by tipoDato)
 - `valorDefecto` (string): Reset value
-- `valorMinimo`, `valorMaximo` (string, optional): Range constraints
+- `valorMinimo`, `valorMaximo` (string, optional): Range constraints (only for numeric types)
 - `requiereReinicio` (boolean): If true, app restart needed to apply
 
 **Example Parameters:**
 
 ```
-DURACION_RESERVA_VENTA       → 20 (minutos)
+DURACION_RESERVA_VENTA       → 1200 (segundos = 20 minutos)
 UMBRAL_STOCK_BAJO            → 10 (unidades)
 SISTEMA_NOTIFICACIONES_ACTIVO → true (booleano)
 ```
@@ -101,22 +101,22 @@ Creates a new operational parameter.
 {
   "clave": "DURACION_RESERVA_VENTA",
   "nombre": "Duración de Reserva para Ventas",
-  "descripcion": "Tiempo en minutos que se reservan ítems en compra online",
-  "tipoDato": "DURACION",
-  "valor": "20",
-  "valorDefecto": "20",
-  "valorMinimo": "5",
-  "valorMaximo": "60",
+  "descripcion": "Tiempo en segundos que se reservan ítems cuando cliente inicia pago online (1200s = 20min)",
+  "tipoDato": "ENTERO",
+  "valor": "1200",
+  "valorDefecto": "1200",
+  "valorMinimo": "300",
+  "valorMaximo": "3600",
   "requiereReinicio": false
 }
 ```
 
 **Validation:**
 
-- `clave`: Unique, uppercase, underscores/digits only
-- `tipoDato`: Must match enum (ENTERO|DECIMAL|BOOLEAN|TEXTO|DURACION)
-- `valor`: Validated by tipoDato rules + range constraints
-- `valorMinimo`, `valorMaximo`: Only for numeric types
+- `clave`: Unique, uppercase, underscores/digits only (regex: `^[A-Z_]+$`)
+- `tipoDato`: Must match enum (ENTERO|DECIMAL|BOOLEAN)
+- `valor`: Validated by tipoDato rules + range constraints (stored as string)
+- `valorMinimo`, `valorMaximo`: Only for numeric types (ENTERO, DECIMAL)
 
 **Response:** `201 Created`
 
@@ -125,15 +125,16 @@ Creates a new operational parameter.
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "clave": "DURACION_RESERVA_VENTA",
   "nombre": "Duración de Reserva para Ventas",
-  "descripcion": "...",
-  "tipoDato": "DURACION",
-  "valor": "20",
-  "valorDefecto": "20",
-  "valorMinimo": "5",
-  "valorMaximo": "60",
+  "descripcion": "Tiempo en segundos que se reservan ítems cuando cliente inicia pago online (1200s = 20min)",
+  "tipoDato": "ENTERO",
+  "valor": "1200",
+  "valorDefecto": "1200",
+  "valorMinimo": "300",
+  "valorMaximo": "3600",
   "requiereReinicio": false,
   "modificadoPorId": null,
-  "fechaModificacion": "2026-02-02T21:30:00.000Z"
+  "fechaModificacion": "2026-02-02T21:30:00.000Z",
+  "fechaCreacion": "2026-02-02T21:30:00.000Z"
 }
 ```
 
@@ -152,8 +153,7 @@ Updates the value of an existing parameter (other fields immutable).
 
 ```json
 {
-  "valor": "25",
-  "modificadoPorId": "660e8400-e29b-41d4-a716-446655440001"
+  "valor": "1500"
 }
 ```
 
@@ -335,13 +335,13 @@ GET /api/configuracion/politicas?tipo=CAMBIOS
 
 Parameter type determines validation rules:
 
-| Type     | Example Value | Validation                       |
-| -------- | ------------- | -------------------------------- |
-| ENTERO   | "20"          | Valid integer                    |
-| DECIMAL  | "0.25"        | Valid decimal (respects min/max) |
-| BOOLEAN  | "true"        | "true" or "false"                |
-| TEXTO    | "soporte@..." | Any string (up to 500 chars)     |
-| DURACION | "20"          | Integer (usually minutes)        |
+| Type    | Example Value | Validation                                  |
+| ------- | ------------- | ------------------------------------------- |
+| ENTERO  | "1200"        | Valid integer (supports min/max range)      |
+| DECIMAL | "0.25"        | Valid decimal (supports min/max range)      |
+| BOOLEAN | "true"        | Must be exactly "true" or "false" (strings) |
+
+**Note:** All values are stored as strings in the database but validated according to their `tipoDato`.
 
 ### Estado (Policy State)
 
@@ -386,11 +386,10 @@ GET /api/configuracion/politicas?tipo=CAMBIOS
 ### Pattern 3: Update Parameter with Audit Trail
 
 ```bash
-# Capture who modified the parameter
+# Update parameter value (modifier tracked internally)
 PATCH /api/configuracion/parametros/550e8400...
 {
-  "valor": "25",
-  "modificadoPorId": "660e8400-e29b-41d4-a716-446655440001"
+  "valor": "1500"
 }
 ```
 

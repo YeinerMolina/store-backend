@@ -40,7 +40,13 @@ configuracion/
 │   │   └── outbound/
 │   │       └── configuracion.repository.ts         ← Persistence contract
 │   └── events/
-│       └── configuracion.events.ts                 ← Domain events
+│       ├── configuracion-event-type.enum.ts        ← Event type constants
+│       ├── parametro-operativo-creado.event.ts
+│       ├── parametro-operativo-actualizado.event.ts
+│       ├── politica-creada.event.ts
+│       ├── politica-publicada.event.ts
+│       ├── politica-archivada.event.ts
+│       └── index.ts                                ← Barrel exports
 ├── application/               ← Orchestration (DTOs, schemas, mappers)
 │   ├── services/
 │   │   └── configuracion-application.service.ts    ← Service implementation

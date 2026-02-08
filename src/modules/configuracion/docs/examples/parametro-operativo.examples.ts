@@ -12,7 +12,7 @@ export const CREAR_PARAMETRO_DURACION_RESERVA = {
   clave: 'DURACION_RESERVA_VENTA',
   nombre: 'Duración de Reserva para Ventas',
   descripcion:
-    'Tiempo en segundos que se reservan ítems cuando cliente inicia pago online',
+    'Tiempo en segundos que se reservan ítems cuando cliente inicia pago online (1200s = 20min)',
   tipoDato: 'ENTERO',
   valor: '1200',
   valorDefecto: '1200',
@@ -46,6 +46,7 @@ export const CREAR_PARAMETRO_ACTIVO = {
   tipoDato: 'BOOLEAN',
   valor: 'true',
   valorDefecto: 'true',
+  requiereReinicio: false,
 };
 
 /**
@@ -88,7 +89,6 @@ export const PARAMETRO_RESPONSE = {
  */
 export const ACTUALIZAR_PARAMETRO_REQUEST = {
   valor: '1500',
-  modificadoPorId: '660e8400-e29b-41d4-a716-446655440001',
 };
 
 /**

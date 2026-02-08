@@ -3,16 +3,10 @@ import { Politica } from '../../aggregates/politica/politica.entity';
 import { TipoPoliticaEnum } from '../../aggregates/configuracion.types';
 
 export interface ConfiguracionRepository {
-  /**
-   * UPSERT: insert si no existe, update si existe.
-   */
   guardarParametro(parametro: ParametroOperativo): Promise<void>;
 
   buscarParametroPorId(id: string): Promise<ParametroOperativo | null>;
 
-  /**
-   * Búsqueda principal por identificador de negocio (clave).
-   */
   buscarParametroPorClave(clave: string): Promise<ParametroOperativo | null>;
 
   listarParametros(): Promise<ParametroOperativo[]>;
@@ -21,15 +15,9 @@ export interface ConfiguracionRepository {
 
   buscarPoliticaPorId(id: string): Promise<Politica | null>;
 
-  /**
-   * Garantiza max 1 política VIGENTE por tipo (invariante crítico).
-   */
   buscarPoliticaVigente(tipo: TipoPoliticaEnum): Promise<Politica | null>;
 
   listarPoliticas(tipo?: TipoPoliticaEnum): Promise<Politica[]>;
 
-  /**
-   * Retorna 0 o 1 normalmente; array para checks de invariante.
-   */
   buscarPoliticasVigentesPorTipo(tipo: TipoPoliticaEnum): Promise<Politica[]>;
 }

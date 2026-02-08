@@ -1,15 +1,14 @@
-import { IdGenerator } from '@shared/domain/factories';
 import {
   ActualizarParametroOperativoProps,
   CrearParametroOperativoProps,
-  ParametroOperativoData,
   ParametroOperativoEvento,
   TipoDatoEnum,
 } from '../configuracion.types';
 import {
   ParametroOperativoActualizado,
   ParametroOperativoCreado,
-} from '../../events/configuracion.events';
+} from '../../events';
+import type { ParametroOperativoData } from './parametro-operativo.types';
 
 export class ParametroOperativo {
   readonly #id: string;
@@ -93,9 +92,10 @@ export class ParametroOperativo {
     this.#fechaModificacion = props.fechaModificacion;
   }
 
-  static crear(params: CrearParametroOperativoProps): ParametroOperativo {
-    const id = IdGenerator.generate();
-
+  static crear(
+    id: string,
+    params: CrearParametroOperativoProps,
+  ): ParametroOperativo {
     ParametroOperativo.validarValor(params.valor, params.tipoDato);
 
     if (params.valorMinimo || params.valorMaximo) {

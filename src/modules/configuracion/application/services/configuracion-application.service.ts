@@ -3,10 +3,8 @@ import type {
   ConfiguracionService,
   CrearParametroOperativoProps,
   ActualizarParametroOperativoProps,
-  ParametroOperativoData,
   CrearPoliticaProps,
   PublicarPoliticaProps,
-  PoliticaData,
   TipoPoliticaEnum,
 } from '../../domain';
 import {
@@ -16,8 +14,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ParametroOperativo, Politica } from '../../domain';
-import { CONFIGURACION_REPOSITORY_TOKEN } from '../../infrastructure/tokens';
-import { ConfiguracionMapper } from '../mappers/configuracion.mapper';
+import {
+  ParametroOperativoFactory,
+  PoliticaFactory,
+} from '../../domain/factories';
+import { CONFIGURACION_REPOSITORY_TOKEN } from '../../domain/ports/tokens';
 
 @Injectable()
 export class ConfiguracionApplicationService implements ConfiguracionService {
@@ -26,12 +27,9 @@ export class ConfiguracionApplicationService implements ConfiguracionService {
     private readonly repository: ConfiguracionRepository,
   ) {}
 
-  /**
-   * Throw ConflictException si la clave ya existe.
-   */
   async crearParametroOperativo(
     params: CrearParametroOperativoProps,
-  ): Promise<ParametroOperativoData> {
+  ): Promise<ParametroOperativo> {
     const existing = await this.repository.buscarParametroPorClave(
       params.clave,
     );
@@ -41,16 +39,16 @@ export class ConfiguracionApplicationService implements ConfiguracionService {
       );
     }
 
-    const parametro = ParametroOperativo.crear(params);
+    const parametro = ParametroOperativoFactory.crear(params);
     await this.repository.guardarParametro(parametro);
 
-    return ConfiguracionMapper.parametroToData(parametro);
+    return parametro;
   }
 
   async actualizarParametroOperativo(
     id: string,
     params: ActualizarParametroOperativoProps,
-  ): Promise<ParametroOperativoData> {
+  ): Promise<ParametroOperativo> {
     const parametro = await this.repository.buscarParametroPorId(id);
     if (!parametro) {
       throw new NotFoundException(`Parámetro ${id} no encontrado`);
@@ -59,36 +57,26 @@ export class ConfiguracionApplicationService implements ConfiguracionService {
     parametro.actualizar(params);
     await this.repository.guardarParametro(parametro);
 
-    return ConfiguracionMapper.parametroToData(parametro);
+    return parametro;
   }
 
   async obtenerParametroOperativo(
     id: string,
-  ): Promise<ParametroOperativoData | null> {
-    const parametro = await this.repository.buscarParametroPorId(id);
-    if (!parametro) return null;
-
-    return ConfiguracionMapper.parametroToData(parametro);
+  ): Promise<ParametroOperativo | null> {
+    return this.repository.buscarParametroPorId(id);
   }
 
   async obtenerParametroPorClave(
     clave: string,
-  ): Promise<ParametroOperativoData | null> {
-    const parametro = await this.repository.buscarParametroPorClave(clave);
-    if (!parametro) return null;
-
-    return ConfiguracionMapper.parametroToData(parametro);
+  ): Promise<ParametroOperativo | null> {
+    return this.repository.buscarParametroPorClave(clave);
   }
 
-  async listarParametros(): Promise<ParametroOperativoData[]> {
-    const parametros = await this.repository.listarParametros();
-    return parametros.map(ConfiguracionMapper.parametroToData);
+  async listarParametros(): Promise<ParametroOperativo[]> {
+    return this.repository.listarParametros();
   }
 
-  /**
-   * Throw ConflictException si (tipo, version) ya existe.
-   */
-  async crearPolitica(params: CrearPoliticaProps): Promise<PoliticaData> {
+  async crearPolitica(params: CrearPoliticaProps): Promise<Politica> {
     const existing = await this.repository.listarPoliticas(params.tipo);
     if (
       existing.some(
@@ -100,20 +88,16 @@ export class ConfiguracionApplicationService implements ConfiguracionService {
       );
     }
 
-    const politica = Politica.crear(params);
+    const politica = PoliticaFactory.crear(params);
     await this.repository.guardarPolitica(politica);
 
-    return ConfiguracionMapper.politicaToData(politica);
+    return politica;
   }
 
-  /**
-   * Archiva automáticamente política VIGENTE anterior del mismo tipo.
-   * Transaccional: si archivar falla, publicar también falla.
-   */
   async publicarPolitica(
     politicaId: string,
     params: PublicarPoliticaProps,
-  ): Promise<PoliticaData> {
+  ): Promise<Politica> {
     const politica = await this.repository.buscarPoliticaPorId(politicaId);
     if (!politica) {
       throw new NotFoundException(`Política ${politicaId} no encontrada`);
@@ -130,20 +114,16 @@ export class ConfiguracionApplicationService implements ConfiguracionService {
 
     await this.repository.guardarPolitica(politica);
 
-    return ConfiguracionMapper.politicaToData(politica);
+    return politica;
   }
 
   async obtenerPoliticaVigente(
     tipo: TipoPoliticaEnum,
-  ): Promise<PoliticaData | null> {
-    const politica = await this.repository.buscarPoliticaVigente(tipo);
-    if (!politica) return null;
-
-    return ConfiguracionMapper.politicaToData(politica);
+  ): Promise<Politica | null> {
+    return this.repository.buscarPoliticaVigente(tipo);
   }
 
-  async listarPoliticas(tipo?: TipoPoliticaEnum): Promise<PoliticaData[]> {
-    const politicas = await this.repository.listarPoliticas(tipo);
-    return politicas.map(ConfiguracionMapper.politicaToData);
+  async listarPoliticas(tipo?: TipoPoliticaEnum): Promise<Politica[]> {
+    return this.repository.listarPoliticas(tipo);
   }
 }

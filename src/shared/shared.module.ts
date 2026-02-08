@@ -1,13 +1,11 @@
 import { Module } from '@nestjs/common';
 import { EventBusModule } from './infrastructure/event-bus/event-bus.module';
 import { PrismaService } from './database/prisma.service';
+import { ExceptionFiltersModule } from './filters/exception-filters.module';
 
-/**
- * SharedModule centralizes common infrastructure for all bounded contexts.
- */
 @Module({
-  imports: [EventBusModule],
+  imports: [EventBusModule, ExceptionFiltersModule],
   providers: [PrismaService],
-  exports: [EventBusModule, PrismaService],
+  exports: [EventBusModule, ExceptionFiltersModule, PrismaService],
 })
 export class SharedModule {}

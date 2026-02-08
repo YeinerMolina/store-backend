@@ -3,7 +3,7 @@ import {
   ActualizarParametroOperativoProps,
   CrearParametroOperativoProps,
   ParametroOperativoData,
-  TipoDato,
+  ParametroOperativoEvento,
   TipoDatoEnum,
 } from '../configuracion.types';
 import {
@@ -12,29 +12,85 @@ import {
 } from '../../events/configuracion.events';
 
 export class ParametroOperativo {
-  private readonly eventos: (
-    | ParametroOperativoCreado
-    | ParametroOperativoActualizado
-  )[] = [];
+  readonly #id: string;
+  readonly #clave: string;
+  readonly #nombre: string;
+  readonly #descripcion: string | undefined;
+  readonly #tipoDato: TipoDatoEnum;
+  #valor: string;
+  readonly #valorDefecto: string;
+  readonly #valorMinimo: string | undefined;
+  readonly #valorMaximo: string | undefined;
+  readonly #requiereReinicio: boolean;
+  #modificadoPorId: string | undefined;
+  #fechaModificacion: Date;
+  readonly #eventos: ParametroOperativoEvento[] = [];
 
-  /**
-   * Campos con prefijo _ son mutables internamente pero readonly externamente.
-   */
-  private constructor(
-    private readonly id: string,
-    private readonly clave: string,
-    private readonly nombre: string,
-    private readonly descripcion: string | undefined,
-    private readonly tipoDato: TipoDato,
-    private _valor: string,
-    private readonly valorDefecto: string,
-    private readonly valorMinimo: string | undefined,
-    private readonly valorMaximo: string | undefined,
-    private readonly requiereReinicio: boolean,
-    private _modificadoPorId: string | undefined,
-    private _fechaModificacion: Date,
-  ) {
-    Object.freeze(this);
+  get id(): string {
+    return this.#id;
+  }
+
+  get clave(): string {
+    return this.#clave;
+  }
+
+  get nombre(): string {
+    return this.#nombre;
+  }
+
+  get descripcion(): string | undefined {
+    return this.#descripcion;
+  }
+
+  get tipoDato(): TipoDatoEnum {
+    return this.#tipoDato;
+  }
+
+  get valor(): string {
+    return this.#valor;
+  }
+
+  get valorDefecto(): string {
+    return this.#valorDefecto;
+  }
+
+  get valorMinimo(): string | undefined {
+    return this.#valorMinimo;
+  }
+
+  get valorMaximo(): string | undefined {
+    return this.#valorMaximo;
+  }
+
+  get requiereReinicio(): boolean {
+    return this.#requiereReinicio;
+  }
+
+  get modificadoPorId(): string | undefined {
+    return this.#modificadoPorId;
+  }
+
+  get fechaModificacion(): Date {
+    return this.#fechaModificacion;
+  }
+
+  get eventos(): ParametroOperativoEvento[] {
+    return [...this.#eventos];
+  }
+
+  private constructor(props: ParametroOperativoData) {
+    this.#id = props.id;
+    this.#clave = props.clave;
+    this.#nombre = props.nombre;
+    this.#descripcion = props.descripcion;
+    this.#tipoDato = props.tipoDato;
+    this.#valor = props.valor;
+    this.#valorDefecto = props.valorDefecto;
+    this.#valorMinimo = props.valorMinimo;
+    this.#valorMaximo = props.valorMaximo;
+    this.#requiereReinicio = props.requiereReinicio;
+    this.#modificadoPorId = props.modificadoPorId;
+    this.#fechaModificacion = props.fechaModificacion;
   }
 
   static crear(params: CrearParametroOperativoProps): ParametroOperativo {
@@ -51,80 +107,61 @@ export class ParametroOperativo {
       );
     }
 
-    const parametro = new ParametroOperativo(
+    const parametro = new ParametroOperativo({
       id,
-      params.clave,
-      params.nombre,
-      params.descripcion,
-      params.tipoDato,
-      params.valor,
-      params.valorDefecto,
-      params.valorMinimo,
-      params.valorMaximo,
-      params.requiereReinicio ?? false,
-      undefined,
-      new Date(),
-    );
+      clave: params.clave,
+      nombre: params.nombre,
+      descripcion: params.descripcion,
+      tipoDato: params.tipoDato,
+      valor: params.valor,
+      valorDefecto: params.valorDefecto,
+      valorMinimo: params.valorMinimo,
+      valorMaximo: params.valorMaximo,
+      requiereReinicio: params.requiereReinicio ?? false,
+      modificadoPorId: undefined,
+      fechaModificacion: new Date(),
+    });
 
-    parametro.eventos.push(
+    parametro.#eventos.push(
       new ParametroOperativoCreado(id, params.clave, params.valor),
     );
 
     return parametro;
   }
 
-  /**
-   * Reconstituye desde BD sin emitir eventos.
-   */
   static desde(data: ParametroOperativoData): ParametroOperativo {
-    return new ParametroOperativo(
-      data.id,
-      data.clave,
-      data.nombre,
-      data.descripcion,
-      data.tipoDato,
-      data.valor,
-      data.valorDefecto,
-      data.valorMinimo,
-      data.valorMaximo,
-      data.requiereReinicio,
-      data.modificadoPorId,
-      data.fechaModificacion,
-    );
+    return new ParametroOperativo(data);
   }
 
-  /**
-   * Evento emitido incluye flag requiereReinicio para notificar si se necesita reiniciar la app.
-   */
   actualizar(params: ActualizarParametroOperativoProps): void {
-    ParametroOperativo.validarValor(params.valor, this.tipoDato);
+    ParametroOperativo.validarValor(params.valor, this.#tipoDato);
 
-    if (this.valorMinimo || this.valorMaximo) {
+    if (this.#valorMinimo || this.#valorMaximo) {
       ParametroOperativo.validarRango(
         params.valor,
-        this.valorMinimo,
-        this.valorMaximo,
-        this.tipoDato,
+        this.#valorMinimo,
+        this.#valorMaximo,
+        this.#tipoDato,
       );
     }
 
-    const valorAnterior = this._valor;
-    this._valor = params.valor;
-    this._modificadoPorId = params.modificadoPorId;
-    this._fechaModificacion = new Date();
+    const valorAnterior = this.#valor;
+    this.#valor = params.valor;
+    this.#modificadoPorId = params.modificadoPorId;
+    this.#fechaModificacion = new Date();
 
-    this.eventos.push(
+    this.#eventos.push(
       new ParametroOperativoActualizado(
-        this.id,
-        this.clave,
+        this.#id,
+        this.#clave,
         valorAnterior,
         params.valor,
-        this.requiereReinicio,
+        this.#requiereReinicio,
       ),
     );
   }
 
-  private static validarValor(valor: string, tipo: TipoDato): void {
+  private static validarValor(valor: string, tipo: TipoDatoEnum): void {
     if (!valor || valor.trim() === '') {
       throw new Error(`Valor no puede estar vacío para tipo ${tipo}`);
     }
@@ -147,22 +184,11 @@ export class ParametroOperativo {
         break;
 
       case TipoDatoEnum.BOOLEAN:
-        if (!['true', 'false', '0', '1'].includes(valor.toLowerCase())) {
+        if (!['true', 'false'].includes(valor.toLowerCase())) {
           throw new Error(
-            `Valor debe ser true/false/0/1 para tipo BOOLEAN, recibido: ${valor}`,
+            `Valor debe ser "true" o "false" para tipo BOOLEAN, recibido: ${valor}`,
           );
         }
-        break;
-
-      case TipoDatoEnum.DURACION:
-        if (!/^\d+\s+(minute|hour|day|second)s?$/.test(valor)) {
-          throw new Error(
-            `Valor debe tener formato "N unit" para tipo DURACION, recibido: ${valor}`,
-          );
-        }
-        break;
-
-      case TipoDatoEnum.TEXTO:
         break;
 
       default:
@@ -170,14 +196,11 @@ export class ParametroOperativo {
     }
   }
 
-  /**
-   * Solo aplica a tipos ENTERO y DECIMAL.
-   */
   private static validarRango(
     valor: string,
     minimo: string | undefined,
     maximo: string | undefined,
-    tipo: TipoDato,
+    tipo: TipoDatoEnum,
   ): void {
     if (tipo !== TipoDatoEnum.ENTERO && tipo !== TipoDatoEnum.DECIMAL) {
       return;
@@ -204,65 +227,7 @@ export class ParametroOperativo {
     }
   }
 
-  getId(): string {
-    return this.id;
-  }
-
-  getClave(): string {
-    return this.clave;
-  }
-
-  getNombre(): string {
-    return this.nombre;
-  }
-
-  getDescripcion(): string | undefined {
-    return this.descripcion;
-  }
-
-  getTipoDato(): TipoDato {
-    return this.tipoDato;
-  }
-
-  getValor(): string {
-    return this._valor;
-  }
-
-  getValorDefecto(): string {
-    return this.valorDefecto;
-  }
-
-  getValorMinimo(): string | undefined {
-    return this.valorMinimo;
-  }
-
-  getValorMaximo(): string | undefined {
-    return this.valorMaximo;
-  }
-
-  isRequiereReinicio(): boolean {
-    return this.requiereReinicio;
-  }
-
-  getModificadoPorId(): string | undefined {
-    return this._modificadoPorId;
-  }
-
-  getFechaModificacion(): Date {
-    return this._fechaModificacion;
-  }
-
-  /**
-   * Retorna copia defensiva para prevenir modificación externa.
-   */
-  getEventos(): (ParametroOperativoCreado | ParametroOperativoActualizado)[] {
-    return [...this.eventos];
-  }
-
-  /**
-   * Limpia eventos post-persistencia para prevenir duplicados.
-   */
   vaciarEventos(): void {
-    (this as any).eventos.length = 0;
+    this.#eventos.length = 0;
   }
 }

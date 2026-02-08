@@ -7,7 +7,7 @@
 //   1. Editar archivos en prisma/schemas/
 //   2. Ejecutar: npm run schema:merge
 //
-// Generado: 2026-02-03T09:56:20.901Z
+// Generado: 2026-02-08T02:22:25.228Z
 // Fuentes: base.prisma, configuracion.prisma, inventario.prisma
 // ============================================================================
 
@@ -28,7 +28,7 @@ datasource db {
  * Modelos para gestionar parámetros operativos y políticas del sistema.
  *
  * Enums:
- * - TipoDato: Tipo de validación para parámetros (ENTERO, DECIMAL, BOOLEAN, TEXTO, DURACION)
+ * - TipoDato: Tipo de validación para parámetros (ENTERO, DECIMAL, BOOLEAN)
  * - TipoPolitica: Categoría de políticas (CAMBIOS, ENVIOS, TERMINOS)
  * - EstadoPolitica: Ciclo de vida de política (BORRADOR, VIGENTE, ARCHIVADA)
  *
@@ -36,14 +36,16 @@ datasource db {
  * - parametro_operativo.clave: UNIQUE (identificador del negocio)
  * - politica (tipo, version): UNIQUE (evita duplicados)
  * - politica (tipo, estado=VIGENTE): solo una activa por tipo (enforced en app)
+ *
+ * Notas:
+ * - Duraciones se almacenan como ENTERO (en segundos)
+ * - Eliminados TEXTO y DURACION de TipoDato en v2.1
  */
 
 enum TipoDato {
   ENTERO
   DECIMAL
   BOOLEAN
-  TEXTO
-  DURACION
 
   @@map("tipo_dato")
 }
@@ -75,7 +77,7 @@ enum EstadoPolitica {
  * - clave: Identificador único (ej: DURACION_RESERVA_VENTA)
  * - nombre: Nombre descriptivo para UI
  * - descripcion: Documentación opcional
- * - tipo_dato: Enum para validación (ENTERO, DECIMAL, BOOLEAN, TEXTO, DURACION)
+ * - tipo_dato: Enum para validación (ENTERO, DECIMAL, BOOLEAN)
  * - valor: Valor actual (string, validado según tipo_dato)
  * - valor_defecto: Valor por defecto (para reset)
  * - valor_minimo: Límite inferior (opcional, solo para ENTERO/DECIMAL)

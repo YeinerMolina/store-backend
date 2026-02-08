@@ -34,7 +34,7 @@ export interface ReservarInventarioProps {
   readonly tipoOperacion: TipoOperacionEnum;
   readonly actorTipo: TipoActorEnum;
   readonly actorId: string;
-  readonly minutosExpiracion: number;
+  readonly segundosExpiracion: number;
 }
 
 /**

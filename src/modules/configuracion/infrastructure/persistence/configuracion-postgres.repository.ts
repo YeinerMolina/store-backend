@@ -16,7 +16,7 @@ import {
   ParametroOperativoData,
   Politica,
   PoliticaData,
-  TipoPolitica,
+  TipoPoliticaEnum,
   EstadoPoliticaEnum,
 } from '@configuracion/domain';
 import { ConfiguracionPersistenceMapper } from './mappers/configuracion-persistence.mapper';
@@ -38,30 +38,30 @@ export class ConfiguracionPostgresRepository implements ConfiguracionRepository 
    */
   async guardarParametro(parametro: ParametroOperativo): Promise<void> {
     const data = ConfiguracionPersistenceMapper.domainDataToPrismaParametro({
-      id: parametro.getId(),
-      clave: parametro.getClave(),
-      nombre: parametro.getNombre(),
-      descripcion: parametro.getDescripcion(),
-      tipoDato: parametro.getTipoDato(),
-      valor: parametro.getValor(),
-      valorDefecto: parametro.getValorDefecto(),
-      valorMinimo: parametro.getValorMinimo(),
-      valorMaximo: parametro.getValorMaximo(),
-      requiereReinicio: parametro.isRequiereReinicio(),
-      modificadoPorId: parametro.getModificadoPorId(),
-      fechaModificacion: parametro.getFechaModificacion(),
+      id: parametro.id,
+      clave: parametro.clave,
+      nombre: parametro.nombre,
+      descripcion: parametro.descripcion,
+      tipoDato: parametro.tipoDato,
+      valor: parametro.valor,
+      valorDefecto: parametro.valorDefecto,
+      valorMinimo: parametro.valorMinimo,
+      valorMaximo: parametro.valorMaximo,
+      requiereReinicio: parametro.requiereReinicio,
+      modificadoPorId: parametro.modificadoPorId,
+      fechaModificacion: parametro.fechaModificacion,
     });
 
     try {
       await this.prisma.parametroOperativo.upsert({
-        where: { id: parametro.getId() },
+        where: { id: parametro.id },
         create: data,
         update: data,
       });
     } catch (error: any) {
       if (error.code === 'P2002' && error.meta?.target?.includes('clave')) {
         throw new ConflictException(
-          `Parámetro con clave ${parametro.getClave()} ya existe`,
+          `Parámetro con clave ${parametro.clave} ya existe`,
         );
       }
       throw error;
@@ -113,20 +113,20 @@ export class ConfiguracionPostgresRepository implements ConfiguracionRepository 
    */
   async guardarPolitica(politica: Politica): Promise<void> {
     const data = ConfiguracionPersistenceMapper.domainDataToPrismaPolitica({
-      id: politica.getId(),
-      tipo: politica.getTipo(),
-      version: politica.getVersion(),
-      contenido: politica.getContenido(),
-      estado: politica.getEstado(),
-      fechaVigenciaDesde: politica.getFechaVigenciaDesde(),
-      fechaVigenciaHasta: politica.getFechaVigenciaHasta(),
-      publicadoPorId: politica.getPublicadoPorId(),
-      fechaCreacion: politica.getFechaCreacion(),
+      id: politica.id,
+      tipo: politica.tipo,
+      version: politica.version,
+      contenido: politica.contenido,
+      estado: politica.estado,
+      fechaVigenciaDesde: politica.fechaVigenciaDesde,
+      fechaVigenciaHasta: politica.fechaVigenciaHasta,
+      publicadoPorId: politica.publicadoPorId,
+      fechaCreacion: politica.fechaCreacion,
     });
 
     try {
       await this.prisma.politica.upsert({
-        where: { id: politica.getId() },
+        where: { id: politica.id },
         create: data,
         update: data,
       });
@@ -137,7 +137,7 @@ export class ConfiguracionPostgresRepository implements ConfiguracionRepository 
         error.meta?.target?.includes('version')
       ) {
         throw new ConflictException(
-          `Política de tipo ${politica.getTipo()} versión ${politica.getVersion()} ya existe`,
+          `Política de tipo ${politica.tipo} versión ${politica.version} ya existe`,
         );
       }
       throw error;
@@ -156,7 +156,9 @@ export class ConfiguracionPostgresRepository implements ConfiguracionRepository 
     return Politica.desde(data);
   }
 
-  async buscarPoliticaVigente(tipo: TipoPolitica): Promise<Politica | null> {
+  async buscarPoliticaVigente(
+    tipo: TipoPoliticaEnum,
+  ): Promise<Politica | null> {
     const record = await this.prisma.politica.findFirst({
       where: {
         tipo,
@@ -171,7 +173,7 @@ export class ConfiguracionPostgresRepository implements ConfiguracionRepository 
     return Politica.desde(data);
   }
 
-  async listarPoliticas(tipo?: TipoPolitica): Promise<Politica[]> {
+  async listarPoliticas(tipo?: TipoPoliticaEnum): Promise<Politica[]> {
     const records = await this.prisma.politica.findMany({
       where: tipo ? { tipo } : undefined,
     });
@@ -184,7 +186,7 @@ export class ConfiguracionPostgresRepository implements ConfiguracionRepository 
   }
 
   async buscarPoliticasVigentesPorTipo(
-    tipo: TipoPolitica,
+    tipo: TipoPoliticaEnum,
   ): Promise<Politica[]> {
     const records = await this.prisma.politica.findMany({
       where: {

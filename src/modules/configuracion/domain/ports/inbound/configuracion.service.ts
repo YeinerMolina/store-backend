@@ -5,7 +5,7 @@ import {
   CrearPoliticaProps,
   PublicarPoliticaProps,
   PoliticaData,
-  TipoPolitica,
+  TipoPoliticaEnum,
 } from '../../aggregates/configuracion.types';
 
 export interface ConfiguracionService {
@@ -42,6 +42,6 @@ export interface ConfiguracionService {
     params: PublicarPoliticaProps,
   ): Promise<PoliticaData>;
 
-  obtenerPoliticaVigente(tipo: TipoPolitica): Promise<PoliticaData | null>;
-  listarPoliticas(tipo?: TipoPolitica): Promise<PoliticaData[]>;
+  obtenerPoliticaVigente(tipo: TipoPoliticaEnum): Promise<PoliticaData | null>;
+  listarPoliticas(tipo?: TipoPoliticaEnum): Promise<PoliticaData[]>;
 }

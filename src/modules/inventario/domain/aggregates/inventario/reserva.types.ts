@@ -10,7 +10,7 @@ export interface CrearReservaProps {
   readonly cantidad: number;
   readonly actorTipo: TipoActorEnum;
   readonly actorId: string;
-  readonly minutosExpiracion: number;
+  readonly segundosExpiracion: number;
 }
 
 /**

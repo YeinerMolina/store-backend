@@ -6,18 +6,18 @@
  */
 
 /**
- * Example Request: Create Parameter (ENTERO type)
+ * Example Request: Create Parameter (ENTERO type - seconds)
  */
 export const CREAR_PARAMETRO_DURACION_RESERVA = {
   clave: 'DURACION_RESERVA_VENTA',
   nombre: 'Duración de Reserva para Ventas',
   descripcion:
-    'Tiempo en minutos que se reservan ítems cuando cliente inicia pago online',
-  tipoDato: 'DURACION',
-  valor: '20',
-  valorDefecto: '20',
-  valorMinimo: '5',
-  valorMaximo: '60',
+    'Tiempo en segundos que se reservan ítems cuando cliente inicia pago online',
+  tipoDato: 'ENTERO',
+  valor: '1200',
+  valorDefecto: '1200',
+  valorMinimo: '300',
+  valorMaximo: '3600',
   requiereReinicio: false,
 };
 
@@ -64,18 +64,6 @@ export const CREAR_PARAMETRO_PORCENTAJE_DESCUENTO = {
 };
 
 /**
- * Example Request: Create Parameter (TEXTO type)
- */
-export const CREAR_PARAMETRO_EMAIL_SOPORTE = {
-  clave: 'EMAIL_SOPORTE_CLIENTE',
-  nombre: 'Email de Soporte al Cliente',
-  descripcion: 'Dirección de email para contactar con soporte',
-  tipoDato: 'TEXTO',
-  valor: 'soporte@tienda.com',
-  valorDefecto: 'soporte@tienda.com',
-};
-
-/**
  * Example Response: ParametroOperativo Created
  */
 export const PARAMETRO_RESPONSE = {
@@ -83,12 +71,12 @@ export const PARAMETRO_RESPONSE = {
   clave: 'DURACION_RESERVA_VENTA',
   nombre: 'Duración de Reserva para Ventas',
   descripcion:
-    'Tiempo en minutos que se reservan ítems cuando cliente inicia pago online',
-  tipoDato: 'DURACION',
-  valor: '20',
-  valorDefecto: '20',
-  valorMinimo: '5',
-  valorMaximo: '60',
+    'Tiempo en segundos que se reservan ítems cuando cliente inicia pago online',
+  tipoDato: 'ENTERO',
+  valor: '1200',
+  valorDefecto: '1200',
+  valorMinimo: '300',
+  valorMaximo: '3600',
   requiereReinicio: false,
   modificadoPorId: null,
   fechaModificacion: '2026-02-02T21:30:00.000Z',
@@ -99,7 +87,7 @@ export const PARAMETRO_RESPONSE = {
  * Example Request: Update Parameter Value
  */
 export const ACTUALIZAR_PARAMETRO_REQUEST = {
-  valor: '25',
+  valor: '1500',
   modificadoPorId: '660e8400-e29b-41d4-a716-446655440001',
 };
 
@@ -111,11 +99,11 @@ export const LISTAR_PARAMETROS_RESPONSE = [
     id: '550e8400-e29b-41d4-a716-446655440000',
     clave: 'DURACION_RESERVA_VENTA',
     nombre: 'Duración de Reserva para Ventas',
-    tipoDato: 'DURACION',
-    valor: '20',
-    valorDefecto: '20',
-    valorMinimo: '5',
-    valorMaximo: '60',
+    tipoDato: 'ENTERO',
+    valor: '1200',
+    valorDefecto: '1200',
+    valorMinimo: '300',
+    valorMaximo: '3600',
     requiereReinicio: false,
     modificadoPorId: null,
     fechaModificacion: '2026-02-02T21:30:00.000Z',

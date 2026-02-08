@@ -12,8 +12,8 @@ export class ConfiguracionStubAdapter implements ConfiguracionPort {
     ParametroConfiguracionInventario,
     number
   > = {
-    [ParametroConfiguracionInventario.DURACION_RESERVA_VENTA]: 20,
-    [ParametroConfiguracionInventario.DURACION_RESERVA_CAMBIO]: 20,
+    [ParametroConfiguracionInventario.DURACION_RESERVA_VENTA]: 1200,
+    [ParametroConfiguracionInventario.DURACION_RESERVA_CAMBIO]: 1200,
     [ParametroConfiguracionInventario.UMBRAL_STOCK_BAJO]: 10,
   };
 

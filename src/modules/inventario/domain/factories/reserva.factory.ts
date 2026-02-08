@@ -9,7 +9,7 @@ export class ReservaFactory {
     const id = IdGenerator.generate();
     const fechaCreacion = new Date();
     const fechaExpiracion = FechaExpiracion.desdeAhora(
-      props.minutosExpiracion,
+      props.segundosExpiracion,
     ).obtenerFecha();
 
     return Reserva.desde({

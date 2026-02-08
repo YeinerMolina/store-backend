@@ -14,20 +14,20 @@
 
 ## 1. ParametroOperativo
 
-| Campo                | Tipo         | Restricciones            | Descripción                               |
-| -------------------- | ------------ | ------------------------ | ----------------------------------------- |
-| `id`                 | uuid         | PK                       |                                           |
-| `clave`              | varchar(50)  | not null, unique         | Identificador del parámetro               |
-| `nombre`             | varchar(100) | not null                 | Nombre descriptivo                        |
-| `descripcion`        | text         | nullable                 | Documentación del parámetro               |
-| `tipo_dato`          | enum         | not null                 | ENTERO, DECIMAL, BOOLEAN, TEXTO, DURACION |
-| `valor`              | varchar(500) | not null                 | Valor actual                              |
-| `valor_defecto`      | varchar(500) | not null                 | Valor por defecto                         |
-| `valor_minimo`       | varchar(100) | nullable                 | Límite inferior                           |
-| `valor_maximo`       | varchar(100) | nullable                 | Límite superior                           |
-| `requiere_reinicio`  | boolean      | not null, default: false | Si requiere reiniciar app                 |
-| `modificado_por`     | uuid         | FK nullable              | Empleado que modificó                     |
-| `fecha_modificacion` | timestamp    | not null                 |                                           |
+| Campo                | Tipo         | Restricciones            | Descripción                 |
+| -------------------- | ------------ | ------------------------ | --------------------------- |
+| `id`                 | uuid         | PK                       |                             |
+| `clave`              | varchar(50)  | not null, unique         | Identificador del parámetro |
+| `nombre`             | varchar(100) | not null                 | Nombre descriptivo          |
+| `descripcion`        | text         | nullable                 | Documentación del parámetro |
+| `tipo_dato`          | enum         | not null                 | ENTERO, DECIMAL, BOOLEAN    |
+| `valor`              | varchar(500) | not null                 | Valor actual                |
+| `valor_defecto`      | varchar(500) | not null                 | Valor por defecto           |
+| `valor_minimo`       | varchar(100) | nullable                 | Límite inferior             |
+| `valor_maximo`       | varchar(100) | nullable                 | Límite superior             |
+| `requiere_reinicio`  | boolean      | not null, default: false | Si requiere reiniciar app   |
+| `modificado_por`     | uuid         | FK nullable              | Empleado que modificó       |
+| `fecha_modificacion` | timestamp    | not null                 |                             |
 
 **Constraints**:
 
@@ -37,8 +37,14 @@
 **Enums**:
 
 ```sql
-CREATE TYPE tipo_dato AS ENUM ('ENTERO', 'DECIMAL', 'BOOLEAN', 'TEXTO', 'DURACION');
+CREATE TYPE tipo_dato AS ENUM ('ENTERO', 'DECIMAL', 'BOOLEAN');
 ```
+
+**Notas**:
+
+- **Tiempos/duraciones**: ENTERO en segundos (ej: 1200 = 20 minutos)
+- **Booleanos**: Strings "true" o "false" (NO se acepta 1/0)
+- **Todos los valores** se almacenan como `varchar(500)` y se validan según `tipo_dato`
 
 ---
 

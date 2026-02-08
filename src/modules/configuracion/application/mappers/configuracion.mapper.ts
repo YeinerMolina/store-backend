@@ -5,8 +5,6 @@ import {
   ParametroOperativoData,
   PoliticaData,
   PublicarPoliticaProps,
-  isTipoDato,
-  isTipoPolitica,
   ParametroOperativo,
   Politica,
 } from '@configuracion/domain';
@@ -24,32 +22,32 @@ import {
 export class ConfiguracionMapper {
   static parametroToData(p: ParametroOperativo): ParametroOperativoData {
     return {
-      id: p.getId(),
-      clave: p.getClave(),
-      nombre: p.getNombre(),
-      descripcion: p.getDescripcion(),
-      tipoDato: p.getTipoDato(),
-      valor: p.getValor(),
-      valorDefecto: p.getValorDefecto(),
-      valorMinimo: p.getValorMinimo(),
-      valorMaximo: p.getValorMaximo(),
-      requiereReinicio: p.isRequiereReinicio(),
-      modificadoPorId: p.getModificadoPorId(),
-      fechaModificacion: p.getFechaModificacion(),
+      id: p.id,
+      clave: p.clave,
+      nombre: p.nombre,
+      descripcion: p.descripcion,
+      tipoDato: p.tipoDato,
+      valor: p.valor,
+      valorDefecto: p.valorDefecto,
+      valorMinimo: p.valorMinimo,
+      valorMaximo: p.valorMaximo,
+      requiereReinicio: p.requiereReinicio,
+      modificadoPorId: p.modificadoPorId,
+      fechaModificacion: p.fechaModificacion,
     };
   }
 
   static politicaToData(p: Politica): PoliticaData {
     return {
-      id: p.getId(),
-      tipo: p.getTipo(),
-      version: p.getVersion(),
-      contenido: p.getContenido(),
-      estado: p.getEstado(),
-      fechaVigenciaDesde: p.getFechaVigenciaDesde(),
-      fechaVigenciaHasta: p.getFechaVigenciaHasta(),
-      publicadoPorId: p.getPublicadoPorId(),
-      fechaCreacion: p.getFechaCreacion(),
+      id: p.id,
+      tipo: p.tipo,
+      version: p.version,
+      contenido: p.contenido,
+      estado: p.estado,
+      fechaVigenciaDesde: p.fechaVigenciaDesde,
+      fechaVigenciaHasta: p.fechaVigenciaHasta,
+      publicadoPorId: p.publicadoPorId,
+      fechaCreacion: p.fechaCreacion,
     };
   }
 
@@ -99,10 +97,6 @@ export class ConfiguracionMapper {
   static crearRequestToProps(
     request: CrearParametroOperativoRequestDto,
   ): CrearParametroOperativoProps {
-    if (!isTipoDato(request.tipoDato)) {
-      throw new Error(`Tipo de dato inválido: ${request.tipoDato}`);
-    }
-
     return {
       clave: request.clave,
       nombre: request.nombre,
@@ -116,9 +110,6 @@ export class ConfiguracionMapper {
     };
   }
 
-  /**
-   * modificadoPorId viene del contexto HTTP (usuario autenticado), no del request.
-   */
   static actualizarRequestToProps(
     request: ActualizarParametroOperativoRequestDto,
   ): ActualizarParametroOperativoProps {
@@ -131,10 +122,6 @@ export class ConfiguracionMapper {
   static crearPoliticaRequestToProps(
     request: CrearPoliticaRequestDto,
   ): CrearPoliticaProps {
-    if (!isTipoPolitica(request.tipo)) {
-      throw new Error(`Tipo de política inválido: ${request.tipo}`);
-    }
-
     return {
       tipo: request.tipo,
       version: request.version,
@@ -143,9 +130,6 @@ export class ConfiguracionMapper {
     };
   }
 
-  /**
-   * publicadoPorId viene del contexto HTTP (usuario autenticado).
-   */
   static publicarRequestToProps(
     request: PublicarPoliticaRequestDto,
   ): PublicarPoliticaProps {

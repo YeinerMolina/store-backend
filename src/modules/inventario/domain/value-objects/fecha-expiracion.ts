@@ -9,9 +9,9 @@ export class FechaExpiracion {
     return new FechaExpiracion(fecha);
   }
 
-  static desdeAhora(minutosExpiracion: number): FechaExpiracion {
+  static desdeAhora(segundosExpiracion: number): FechaExpiracion {
     const fecha = new Date();
-    fecha.setMinutes(fecha.getMinutes() + minutosExpiracion);
+    fecha.setSeconds(fecha.getSeconds() + segundosExpiracion);
     return new FechaExpiracion(fecha);
   }
 

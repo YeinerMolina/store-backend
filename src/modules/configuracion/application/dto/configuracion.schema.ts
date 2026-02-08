@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TipoDatoEnum, TipoPoliticaEnum } from '@configuracion/domain';
 
 export const CrearParametroOperativoSchema = z.object({
   clave: z
@@ -17,9 +18,12 @@ export const CrearParametroOperativoSchema = z.object({
 
   descripcion: z.string({ error: 'Descripción debe ser string' }).optional(),
 
-  tipoDato: z.enum(['ENTERO', 'DECIMAL', 'BOOLEAN', 'TEXTO', 'DURACION'], {
-    error: 'Tipo de dato debe ser: ENTERO, DECIMAL, BOOLEAN, TEXTO, DURACION',
-  }),
+  tipoDato: z.enum(
+    [TipoDatoEnum.ENTERO, TipoDatoEnum.DECIMAL, TipoDatoEnum.BOOLEAN],
+    {
+      error: 'Tipo de dato debe ser: ENTERO, DECIMAL, BOOLEAN',
+    },
+  ),
 
   valor: z
     .string({ error: 'Valor debe ser string' })
@@ -57,9 +61,16 @@ export type ActualizarParametroOperativoSchemaType = z.infer<
 >;
 
 export const CrearPoliticaSchema = z.object({
-  tipo: z.enum(['CAMBIOS', 'ENVIOS', 'TERMINOS'], {
-    error: 'Tipo debe ser: CAMBIOS, ENVIOS, TERMINOS',
-  }),
+  tipo: z.enum(
+    [
+      TipoPoliticaEnum.CAMBIOS,
+      TipoPoliticaEnum.ENVIOS,
+      TipoPoliticaEnum.TERMINOS,
+    ],
+    {
+      error: 'Tipo debe ser: CAMBIOS, ENVIOS, TERMINOS',
+    },
+  ),
 
   version: z
     .string({ error: 'Versión debe ser string' })

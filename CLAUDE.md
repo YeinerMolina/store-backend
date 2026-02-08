@@ -464,14 +464,14 @@ Ver cada archivo de módulo para detalles completos de invariantes y operaciones
 
 Definidos en `CONFIGURACION`:
 
-| Parámetro                          | Default     | Descripción                                         |
-| ---------------------------------- | ----------- | --------------------------------------------------- |
-| `DURACION_RESERVA_VENTA`           | 20 min      | Tiempo para completar pago antes de expirar reserva |
-| `DURACION_RESERVA_CAMBIO`          | 20 min      | Tiempo para ejecutar cambio                         |
-| `UMBRAL_STOCK_BAJO`                | 10 unidades | Trigger de notificación para empleados              |
-| `MAX_REINTENTOS_NOTIFICACION`      | 3           | Intentos de envío antes de marcar fallida           |
-| `INTERVALO_REINTENTO_NOTIFICACION` | 5 min       | Tiempo entre reintentos                             |
-| `HORAS_EXPIRACION_CARRITO_FISICO`  | 4 horas     | Cuándo marcar carrito físico como abandonado        |
+| Parámetro                          | Default (segundos) | Descripción                                         |
+| ---------------------------------- | ------------------ | --------------------------------------------------- |
+| `DURACION_RESERVA_VENTA`           | 1200 (20 min)      | Tiempo para completar pago antes de expirar reserva |
+| `DURACION_RESERVA_CAMBIO`          | 1200 (20 min)      | Tiempo para ejecutar cambio                         |
+| `UMBRAL_STOCK_BAJO`                | 10 unidades        | Trigger de notificación para empleados              |
+| `MAX_REINTENTOS_NOTIFICACION`      | 3                  | Intentos de envío antes de marcar fallida           |
+| `INTERVALO_REINTENTO_NOTIFICACION` | 300 (5 min)        | Tiempo entre reintentos                             |
+| `HORAS_EXPIRACION_CARRITO_FISICO`  | 14400 (4 horas)    | Cuándo marcar carrito físico como abandonado        |
 
 ---
 
@@ -559,12 +559,12 @@ Este proyecto utiliza **skills** para garantizar consistencia en patrones de có
 
 Todas las skills están en `.claude/skills/` y se cargan automáticamente cuando trabajas en contextos específicos:
 
-| Skill               | Contexto de Activación                                       | Ubicación                         |
-| ------------------- | ------------------------------------------------------------ | --------------------------------- |
-| **hexagonal-module** | Al crear módulos, agregar archivos, validar capas, puertos, adaptadores, DI | `.claude/skills/hexagonal-module/` |
-| **typescript**      | Al escribir código TypeScript (tipos, interfaces, genéricos) | `.claude/skills/typescript/`      |
-| **zod-4**           | Al trabajar con validaciones Zod (DTOs, schemas)             | `.claude/skills/zod-4/`           |
-| **code-comments-policy** | Al escribir, editar o generar código (cualquier lenguaje) | Global: `~/.claude/skills/code-comments-policy/` |
+| Skill                    | Contexto de Activación                                                      | Ubicación                                        |
+| ------------------------ | --------------------------------------------------------------------------- | ------------------------------------------------ |
+| **hexagonal-module**     | Al crear módulos, agregar archivos, validar capas, puertos, adaptadores, DI | `.claude/skills/hexagonal-module/`               |
+| **typescript**           | Al escribir código TypeScript (tipos, interfaces, genéricos)                | `.claude/skills/typescript/`                     |
+| **zod-4**                | Al trabajar con validaciones Zod (DTOs, schemas)                            | `.claude/skills/zod-4/`                          |
+| **code-comments-policy** | Al escribir, editar o generar código (cualquier lenguaje)                   | Global: `~/.claude/skills/code-comments-policy/` |
 
 ### Cuándo se Activan las Skills
 

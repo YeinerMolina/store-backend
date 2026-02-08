@@ -1,11 +1,9 @@
 import type {
   ParametroOperativoData,
   PoliticaData,
-} from '@configuracion/domain';
-import {
-  isTipoDato,
-  isTipoPolitica,
-  isEstadoPolitica,
+  TipoDatoEnum,
+  TipoPoliticaEnum,
+  EstadoPoliticaEnum,
 } from '@configuracion/domain';
 import type {
   ParametroOperativo as PrismaParametroOperativo,
@@ -13,24 +11,15 @@ import type {
 } from '@prisma/client';
 
 export class ConfiguracionPersistenceMapper {
-  /**
-   * Throw si BD tiene valores de enum corruptos.
-   */
   static prismaToDomainParametroData(
     record: PrismaParametroOperativo,
   ): ParametroOperativoData {
-    if (!isTipoDato(record.tipoDato)) {
-      throw new Error(
-        `BD corrupta: tipoDato inválido en registro ${record.id}: ${record.tipoDato}`,
-      );
-    }
-
     return {
       id: record.id,
       clave: record.clave,
       nombre: record.nombre,
       descripcion: record.descripcion ?? undefined,
-      tipoDato: record.tipoDato,
+      tipoDato: record.tipoDato as TipoDatoEnum,
       valor: record.valor,
       valorDefecto: record.valorDefecto,
       valorMinimo: record.valorMinimo ?? undefined,
@@ -58,28 +47,13 @@ export class ConfiguracionPersistenceMapper {
     };
   }
 
-  /**
-   * Throw si BD tiene valores de tipo o estado corruptos.
-   */
   static prismaToDomainPoliticaData(record: PrismaPolitica): PoliticaData {
-    if (!isTipoPolitica(record.tipo)) {
-      throw new Error(
-        `BD corrupta: tipo inválido en política ${record.id}: ${record.tipo}`,
-      );
-    }
-
-    if (!isEstadoPolitica(record.estado)) {
-      throw new Error(
-        `BD corrupta: estado inválido en política ${record.id}: ${record.estado}`,
-      );
-    }
-
     return {
       id: record.id,
-      tipo: record.tipo,
+      tipo: record.tipo as TipoPoliticaEnum,
       version: record.version,
       contenido: record.contenido,
-      estado: record.estado,
+      estado: record.estado as EstadoPoliticaEnum,
       fechaVigenciaDesde: record.fechaVigenciaDesde ?? undefined,
       fechaVigenciaHasta: record.fechaVigenciaHasta ?? undefined,
       publicadoPorId: record.publicadoPor ?? undefined,

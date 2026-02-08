@@ -25,6 +25,7 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { ValidateWith } from '@shared/decorators/validate-with.decorator';
 import type { ConfiguracionService } from '../../domain/ports/inbound/configuracion.service';
+import { TipoPoliticaEnum } from '../../domain/aggregates/configuracion.types';
 import { CONFIGURACION_SERVICE_TOKEN } from '../tokens';
 import {
   CrearParametroOperativoSchema,
@@ -32,7 +33,7 @@ import {
   CrearPoliticaSchema,
   PublicarPoliticaSchema,
 } from '../../application/dto/configuracion.schema';
-import {
+import type {
   CrearParametroOperativoRequestDto,
   ActualizarParametroOperativoRequestDto,
   CrearPoliticaRequestDto,
@@ -223,7 +224,7 @@ export class ConfiguracionController {
     @Param('tipo') tipo: string,
   ): Promise<PoliticaResponseDto> {
     const data = await this.configuracionService.obtenerPoliticaVigente(
-      tipo as any,
+      tipo as TipoPoliticaEnum,
     );
     if (!data) {
       throw new NotFoundException(`No hay política vigente de tipo ${tipo}`);
@@ -243,7 +244,9 @@ export class ConfiguracionController {
   async listarPoliticas(
     @Query('tipo') tipo?: string,
   ): Promise<PoliticaResponseDto[]> {
-    const data = await this.configuracionService.listarPoliticas(tipo as any);
+    const data = await this.configuracionService.listarPoliticas(
+      tipo as TipoPoliticaEnum | undefined,
+    );
     return data.map((d) => ConfiguracionMapper.politicaToResponseDto(d));
   }
 }

@@ -118,7 +118,7 @@ export class InventarioApplicationService implements InventarioService {
       );
     }
 
-    const duracionMinutos = await this.obtenerDuracionReserva(
+    const duracionSegundos = await this.obtenerDuracionReserva(
       command.tipoOperacion,
     );
 
@@ -128,7 +128,7 @@ export class InventarioApplicationService implements InventarioService {
       tipoOperacion: command.tipoOperacion,
       actorTipo: command.actorTipo,
       actorId: command.actorId,
-      minutosExpiracion: duracionMinutos,
+      segundosExpiracion: duracionSegundos,
     });
 
     await this.inventarioRepo.guardar(inventario, {

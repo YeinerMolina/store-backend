@@ -171,7 +171,7 @@ export class Inventario {
       cantidad: props.cantidad,
       actorTipo: props.actorTipo,
       actorId: props.actorId,
-      minutosExpiracion: props.minutosExpiracion,
+      segundosExpiracion: props.segundosExpiracion,
     });
 
     const movimiento = MovimientoInventarioFactory.crear({

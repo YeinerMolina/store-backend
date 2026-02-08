@@ -4,7 +4,7 @@
  * Modelos para gestionar parámetros operativos y políticas del sistema.
  *
  * Enums:
- * - TipoDato: Tipo de validación para parámetros (ENTERO, DECIMAL, BOOLEAN, TEXTO, DURACION)
+ * - TipoDato: Tipo de validación para parámetros (ENTERO, DECIMAL, BOOLEAN)
  * - TipoPolitica: Categoría de políticas (CAMBIOS, ENVIOS, TERMINOS)
  * - EstadoPolitica: Ciclo de vida de política (BORRADOR, VIGENTE, ARCHIVADA)
  *
@@ -12,14 +12,16 @@
  * - parametro_operativo.clave: UNIQUE (identificador del negocio)
  * - politica (tipo, version): UNIQUE (evita duplicados)
  * - politica (tipo, estado=VIGENTE): solo una activa por tipo (enforced en app)
+ *
+ * Notas:
+ * - Duraciones se almacenan como ENTERO (en segundos)
+ * - Eliminados TEXTO y DURACION de TipoDato en v2.1
  */
 
 enum TipoDato {
   ENTERO
   DECIMAL
   BOOLEAN
-  TEXTO
-  DURACION
 
   @@map("tipo_dato")
 }
@@ -51,7 +53,7 @@ enum EstadoPolitica {
  * - clave: Identificador único (ej: DURACION_RESERVA_VENTA)
  * - nombre: Nombre descriptivo para UI
  * - descripcion: Documentación opcional
- * - tipo_dato: Enum para validación (ENTERO, DECIMAL, BOOLEAN, TEXTO, DURACION)
+ * - tipo_dato: Enum para validación (ENTERO, DECIMAL, BOOLEAN)
  * - valor: Valor actual (string, validado según tipo_dato)
  * - valor_defecto: Valor por defecto (para reset)
  * - valor_minimo: Límite inferior (opcional, solo para ENTERO/DECIMAL)

@@ -32,14 +32,14 @@ Centraliza la configuración operativa del sistema sin necesidad de recompilaci�
 
 ## Parámetros Clave del Sistema
 
-| Clave                              | Tipo     | Default | Descripción                      |
-| ---------------------------------- | -------- | ------- | -------------------------------- |
-| `DURACION_RESERVA_VENTA`           | DURACION | 20 min  | Tiempo de reserva para ventas    |
-| `DURACION_RESERVA_CAMBIO`          | DURACION | 20 min  | Tiempo de reserva para cambios   |
-| `UMBRAL_STOCK_BAJO`                | ENTERO   | 10      | Trigger de notificación de stock |
-| `MAX_REINTENTOS_NOTIFICACION`      | ENTERO   | 3       | Reintentos de envío              |
-| `INTERVALO_REINTENTO_NOTIFICACION` | DURACION | 5 min   | Tiempo entre reintentos          |
-| `HORAS_EXPIRACION_CARRITO_FISICO`  | ENTERO   | 4       | Cuándo abandonar carrito físico  |
+| Clave                              | Tipo   | Default | Descripción                                    |
+| ---------------------------------- | ------ | ------- | ---------------------------------------------- |
+| `DURACION_RESERVA_VENTA`           | ENTERO | 1200    | Tiempo de reserva para ventas (segundos)       |
+| `DURACION_RESERVA_CAMBIO`          | ENTERO | 1200    | Tiempo de reserva para cambios (segundos)      |
+| `UMBRAL_STOCK_BAJO`                | ENTERO | 10      | Trigger de notificación de stock               |
+| `MAX_REINTENTOS_NOTIFICACION`      | ENTERO | 3       | Reintentos de envío                            |
+| `INTERVALO_REINTENTO_NOTIFICACION` | ENTERO | 300     | Tiempo entre reintentos (segundos)             |
+| `HORAS_EXPIRACION_CARRITO_FISICO`  | ENTERO | 14400   | Cuándo abandonar carrito físico (segundos: 4h) |
 
 ---
 
@@ -64,10 +64,9 @@ Centraliza la configuración operativa del sistema sin necesidad de recompilaci�
 
 1. Empleado selecciona parámetro y nuevo valor
 2. Sistema valida según tipo_dato:
-   - ENTERO: número entero válido
-   - DURACION: formato válido (ej: "20 minutes")
-   - BOOLEAN: true/false
-   - DECIMAL: número decimal
+   - ENTERO: número entero válido (tiempos en segundos)
+   - DECIMAL: número decimal (porcentajes, ratios)
+   - BOOLEAN: "true" o "false" (string, no 1/0)
 3. Sistema verifica rango (valor_minimo/valor_maximo)
 4. Sistema actualiza valor, registra modificado_por
 5. Si requiere_reinicio = true → advertir al empleado

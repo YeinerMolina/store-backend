@@ -4,29 +4,25 @@ export { Politica } from './aggregates/politica/politica.entity';
 
 // Types
 export type {
-  TipoDato,
-  TipoPolitica,
-  EstadoPolitica,
   CrearParametroOperativoProps,
   ActualizarParametroOperativoProps,
   ParametroOperativoData,
+  ParametroOperativoEvento,
   CrearPoliticaProps,
   PublicarPoliticaProps,
   PoliticaData,
+  PoliticaEvento,
 } from './aggregates/configuracion.types';
 
+// Enums
 export {
   TipoDatoEnum,
   TipoPoliticaEnum,
   EstadoPoliticaEnum,
 } from './aggregates/configuracion.types';
 
-// Type guards
-export {
-  isTipoDato,
-  isTipoPolitica,
-  isEstadoPolitica,
-} from './aggregates/configuracion.types';
+// Helpers
+export { parseParametroValor } from './helpers/parametro.helpers';
 
 // Puertos
 export type { ConfiguracionService } from './ports/inbound/configuracion.service';

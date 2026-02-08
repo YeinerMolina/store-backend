@@ -7,7 +7,7 @@ import type {
   CrearPoliticaProps,
   PublicarPoliticaProps,
   PoliticaData,
-  TipoPolitica,
+  TipoPoliticaEnum,
 } from '../../domain';
 import {
   Injectable,
@@ -92,7 +92,7 @@ export class ConfiguracionApplicationService implements ConfiguracionService {
     const existing = await this.repository.listarPoliticas(params.tipo);
     if (
       existing.some(
-        (p) => p.getTipo() === params.tipo && p.getVersion() === params.version,
+        (p) => p.tipo === params.tipo && p.version === params.version,
       )
     ) {
       throw new ConflictException(
@@ -119,9 +119,7 @@ export class ConfiguracionApplicationService implements ConfiguracionService {
       throw new NotFoundException(`Política ${politicaId} no encontrada`);
     }
 
-    const anterior = await this.repository.buscarPoliticaVigente(
-      politica.getTipo(),
-    );
+    const anterior = await this.repository.buscarPoliticaVigente(politica.tipo);
 
     politica.publicar(params);
 
@@ -136,7 +134,7 @@ export class ConfiguracionApplicationService implements ConfiguracionService {
   }
 
   async obtenerPoliticaVigente(
-    tipo: TipoPolitica,
+    tipo: TipoPoliticaEnum,
   ): Promise<PoliticaData | null> {
     const politica = await this.repository.buscarPoliticaVigente(tipo);
     if (!politica) return null;
@@ -144,7 +142,7 @@ export class ConfiguracionApplicationService implements ConfiguracionService {
     return ConfiguracionMapper.politicaToData(politica);
   }
 
-  async listarPoliticas(tipo?: TipoPolitica): Promise<PoliticaData[]> {
+  async listarPoliticas(tipo?: TipoPoliticaEnum): Promise<PoliticaData[]> {
     const politicas = await this.repository.listarPoliticas(tipo);
     return politicas.map(ConfiguracionMapper.politicaToData);
   }

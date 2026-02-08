@@ -1,4 +1,4 @@
-import { TipoPolitica } from '../aggregates/configuracion.types';
+import { TipoPoliticaEnum } from '../aggregates/configuracion.types';
 
 export class ParametroOperativoCreado {
   readonly eventType = 'ParametroOperativoCreado';
@@ -35,7 +35,7 @@ export class PoliticaCreada {
 
   constructor(
     readonly agregadoId: string,
-    readonly tipo: TipoPolitica,
+    readonly tipo: TipoPoliticaEnum,
     readonly version: string,
     readonly occurredAt: Date = new Date(),
   ) {}
@@ -46,7 +46,7 @@ export class PoliticaPublicada {
 
   constructor(
     readonly agregadoId: string,
-    readonly tipo: TipoPolitica,
+    readonly tipo: TipoPoliticaEnum,
     readonly version: string,
     readonly fechaVigenciaDesde: Date,
     readonly occurredAt: Date = new Date(),
@@ -58,7 +58,7 @@ export class PoliticaArchivada {
 
   constructor(
     readonly agregadoId: string,
-    readonly tipo: TipoPolitica,
+    readonly tipo: TipoPoliticaEnum,
     readonly version: string,
     readonly occurredAt: Date = new Date(),
   ) {}

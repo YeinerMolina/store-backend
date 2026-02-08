@@ -1,6 +1,6 @@
 import { ParametroOperativo } from '../../aggregates/parametro-operativo/parametro-operativo.entity';
 import { Politica } from '../../aggregates/politica/politica.entity';
-import { TipoPolitica } from '../../aggregates/configuracion.types';
+import { TipoPoliticaEnum } from '../../aggregates/configuracion.types';
 
 export interface ConfiguracionRepository {
   /**
@@ -24,12 +24,12 @@ export interface ConfiguracionRepository {
   /**
    * Garantiza max 1 política VIGENTE por tipo (invariante crítico).
    */
-  buscarPoliticaVigente(tipo: TipoPolitica): Promise<Politica | null>;
+  buscarPoliticaVigente(tipo: TipoPoliticaEnum): Promise<Politica | null>;
 
-  listarPoliticas(tipo?: TipoPolitica): Promise<Politica[]>;
+  listarPoliticas(tipo?: TipoPoliticaEnum): Promise<Politica[]>;
 
   /**
    * Retorna 0 o 1 normalmente; array para checks de invariante.
    */
-  buscarPoliticasVigentesPorTipo(tipo: TipoPolitica): Promise<Politica[]>;
+  buscarPoliticasVigentesPorTipo(tipo: TipoPoliticaEnum): Promise<Politica[]>;
 }

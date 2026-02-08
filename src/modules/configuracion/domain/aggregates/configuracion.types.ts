@@ -1,60 +1,34 @@
-export const TipoDatoEnum = {
-  ENTERO: 'ENTERO',
-  DECIMAL: 'DECIMAL',
-  BOOLEAN: 'BOOLEAN',
-  TEXTO: 'TEXTO',
-  DURACION: 'DURACION',
-} as const;
+import {
+  ParametroOperativoActualizado,
+  ParametroOperativoCreado,
+  PoliticaArchivada,
+  PoliticaCreada,
+  PoliticaPublicada,
+} from '../events/configuracion.events';
 
-export type TipoDato = (typeof TipoDatoEnum)[keyof typeof TipoDatoEnum];
-
-export const TipoPoliticaEnum = {
-  CAMBIOS: 'CAMBIOS',
-  ENVIOS: 'ENVIOS',
-  TERMINOS: 'TERMINOS',
-} as const;
-
-export type TipoPolitica =
-  (typeof TipoPoliticaEnum)[keyof typeof TipoPoliticaEnum];
-
-export const EstadoPoliticaEnum = {
-  BORRADOR: 'BORRADOR',
-  VIGENTE: 'VIGENTE',
-  ARCHIVADA: 'ARCHIVADA',
-} as const;
-
-export type EstadoPolitica =
-  (typeof EstadoPoliticaEnum)[keyof typeof EstadoPoliticaEnum];
-
-/**
- * Permite validación type-safe eliminando uso de `any` en mappers.
- */
-export function isTipoDato(value: unknown): value is TipoDato {
-  return (
-    typeof value === 'string' &&
-    Object.values(TipoDatoEnum).includes(value as TipoDato)
-  );
+export enum TipoDatoEnum {
+  ENTERO = 'ENTERO',
+  DECIMAL = 'DECIMAL',
+  BOOLEAN = 'BOOLEAN',
 }
 
-export function isTipoPolitica(value: unknown): value is TipoPolitica {
-  return (
-    typeof value === 'string' &&
-    Object.values(TipoPoliticaEnum).includes(value as TipoPolitica)
-  );
+export enum TipoPoliticaEnum {
+  CAMBIOS = 'CAMBIOS',
+  ENVIOS = 'ENVIOS',
+  TERMINOS = 'TERMINOS',
 }
 
-export function isEstadoPolitica(value: unknown): value is EstadoPolitica {
-  return (
-    typeof value === 'string' &&
-    Object.values(EstadoPoliticaEnum).includes(value as EstadoPolitica)
-  );
+export enum EstadoPoliticaEnum {
+  BORRADOR = 'BORRADOR',
+  VIGENTE = 'VIGENTE',
+  ARCHIVADA = 'ARCHIVADA',
 }
 
 export interface CrearParametroOperativoProps {
   readonly clave: string;
   readonly nombre: string;
   readonly descripcion?: string;
-  readonly tipoDato: TipoDato;
+  readonly tipoDato: TipoDatoEnum;
   readonly valor: string;
   readonly valorDefecto: string;
   readonly valorMinimo?: string;
@@ -67,15 +41,12 @@ export interface ActualizarParametroOperativoProps {
   readonly modificadoPorId?: string;
 }
 
-/**
- * Reconstruye agregados desde BD sin emitir eventos.
- */
 export interface ParametroOperativoData {
   readonly id: string;
   readonly clave: string;
   readonly nombre: string;
   readonly descripcion?: string;
-  readonly tipoDato: TipoDato;
+  readonly tipoDato: TipoDatoEnum;
   readonly valor: string;
   readonly valorDefecto: string;
   readonly valorMinimo?: string;
@@ -86,7 +57,7 @@ export interface ParametroOperativoData {
 }
 
 export interface CrearPoliticaProps {
-  readonly tipo: TipoPolitica;
+  readonly tipo: TipoPoliticaEnum;
   readonly version: string;
   readonly contenido: string;
   readonly publicadoPorId?: string;
@@ -97,17 +68,23 @@ export interface PublicarPoliticaProps {
   readonly publicadoPorId?: string;
 }
 
-/**
- * Reconstruye agregados desde BD sin emitir eventos.
- */
 export interface PoliticaData {
   readonly id: string;
-  readonly tipo: TipoPolitica;
+  readonly tipo: TipoPoliticaEnum;
   readonly version: string;
   readonly contenido: string;
-  readonly estado: EstadoPolitica;
+  readonly estado: EstadoPoliticaEnum;
   readonly fechaVigenciaDesde?: Date;
   readonly fechaVigenciaHasta?: Date;
   readonly publicadoPorId?: string;
   readonly fechaCreacion: Date;
 }
+
+export type ParametroOperativoEvento =
+  | ParametroOperativoCreado
+  | ParametroOperativoActualizado;
+
+export type PoliticaEvento =
+  | PoliticaCreada
+  | PoliticaPublicada
+  | PoliticaArchivada;

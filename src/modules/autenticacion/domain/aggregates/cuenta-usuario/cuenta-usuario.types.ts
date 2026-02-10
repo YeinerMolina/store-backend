@@ -1,4 +1,6 @@
 import { TipoUsuario, EstadoCuenta } from '../types';
+import type { SesionUsuario } from '../sesion-usuario/sesion-usuario.entity';
+import type { TokenRecuperacion } from '../token-recuperacion/token-recuperacion.entity';
 
 export interface CrearCuentaUsuarioProps {
   email: string;
@@ -52,4 +54,20 @@ export interface ResultadoAutenticacion {
 export interface OpcionesBloqueo {
   numeroBloqueo: number;
   minutosBloqueoInicial: number;
+}
+
+/**
+ * Opciones declarativas para persistir entidades relacionadas con CuentaUsuario.
+ * Usado por el repository para operaciones atómicas sobre el agregado completo.
+ */
+export interface GuardarCuentaUsuarioOptions {
+  sesiones?: {
+    nuevas?: SesionUsuario[];
+    actualizadas?: SesionUsuario[];
+    eliminadas?: string[];
+  };
+  tokensRecuperacion?: {
+    nuevos?: TokenRecuperacion[];
+    actualizados?: TokenRecuperacion[];
+  };
 }

@@ -20,8 +20,6 @@ export class SesionUsuario {
   readonly #cuentaUsuarioId: string;
   readonly #refreshTokenHash: string;
   readonly #dispositivo: string | null;
-  readonly #ipAddress: string | null;
-  readonly #ubicacion: string | null;
   #estado: EstadoSesion;
   readonly #fechaCreacion: Date;
   readonly #fechaExpiracion: Date;
@@ -40,14 +38,6 @@ export class SesionUsuario {
 
   get dispositivo(): string | null {
     return this.#dispositivo;
-  }
-
-  get ipAddress(): string | null {
-    return this.#ipAddress;
-  }
-
-  get ubicacion(): string | null {
-    return this.#ubicacion;
   }
 
   get estado(): EstadoSesion {
@@ -78,13 +68,15 @@ export class SesionUsuario {
     return this.#motivoRevocacion;
   }
 
+  get refreshTokenHash(): string {
+    return this.#refreshTokenHash;
+  }
+
   private constructor(props: SesionUsuarioProps) {
     this.#id = props.id;
     this.#cuentaUsuarioId = props.cuentaUsuarioId;
     this.#refreshTokenHash = props.refreshTokenHash;
     this.#dispositivo = props.dispositivo;
-    this.#ipAddress = props.ipAddress;
-    this.#ubicacion = props.ubicacion;
     this.#estado = props.estado;
     this.#fechaCreacion = props.fechaCreacion;
     this.#fechaExpiracion = props.fechaExpiracion;
@@ -94,7 +86,7 @@ export class SesionUsuario {
     this.#motivoRevocacion = props.motivoRevocacion;
   }
 
-  static reconstituir(props: SesionUsuarioProps): SesionUsuario {
+  static desde(props: SesionUsuarioProps): SesionUsuario {
     return new SesionUsuario(props);
   }
 

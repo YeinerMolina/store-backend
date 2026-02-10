@@ -94,6 +94,10 @@ export class CuentaUsuario {
     return this.#tokensRecuperacion;
   }
 
+  get passwordHash(): string {
+    return this.#passwordHash;
+  }
+
   private constructor(props: CuentaUsuarioProps) {
     this.#id = props.id;
     this.#email = props.email;
@@ -113,7 +117,7 @@ export class CuentaUsuario {
     this.validarInvariantes();
   }
 
-  static reconstituir(props: CuentaUsuarioProps): CuentaUsuario {
+  static desde(props: CuentaUsuarioProps): CuentaUsuario {
     return new CuentaUsuario(props);
   }
 
@@ -178,10 +182,6 @@ export class CuentaUsuario {
     return { exito: true };
   }
 
-  /**
-   * Mantiene el password hash encapsulado dentro del aggregate.
-   * Sigue el principio "Tell, Don't Ask" para proteger secretos del dominio.
-   */
   verificarPassword(passwordHash: string): boolean {
     return this.#passwordHash === passwordHash;
   }
@@ -208,13 +208,6 @@ export class CuentaUsuario {
     }
   }
 
-  /**
-   * Usa backoff exponencial para penalizar intentos repetidos:
-   * - 1er bloqueo: tiempo base
-   * - 2do bloqueo: 3x tiempo base
-   * - 3er bloqueo: 12x tiempo base
-   * - 4to+ bloqueo: 288x tiempo base (2 días si base = 10 min)
-   */
   private calcularMinutosBloqueo(
     numeroBloqueo: number,
     minutosBloqueoInicial: number,
@@ -285,15 +278,13 @@ export class CuentaUsuario {
     this.#fechaModificacion = new Date();
   }
 
-  /**
-   * Side effects:
-   * - Si cuenta estaba BLOQUEADA, la desbloquea automáticamente
-   * - Resetea intentos fallidos
-   */
   cambiarPassword(nuevoPasswordHash: string): void {
     this.#passwordHash = nuevoPasswordHash;
     this.#ultimoCambioPassword = new Date();
+    this.#fechaModificacion = new Date();
+  }
 
+  desbloquearYResetearIntentos(): void {
     if (this.#estado === EstadoCuenta.BLOQUEADA) {
       this.#estado = EstadoCuenta.ACTIVA;
       this.#bloqueadoHasta = null;
@@ -317,10 +308,6 @@ export class CuentaUsuario {
     this.#fechaModificacion = new Date();
   }
 
-  /**
-   * Los clientes nunca requieren cambio de password.
-   * Los empleados deben cambiar password cada 90 días (configurable).
-   */
   requiereCambioPassword(diasExpiracion = 90): boolean {
     if (this.#tipoUsuario === TipoUsuario.CLIENTE) {
       return false;

@@ -96,7 +96,7 @@ AUTENTICACION es el guardián del acceso. Controla QUIÉN puede entrar al sistem
    - Estado = PENDIENTE
    - `fecha_expiracion > now()`
 4. **Transacción atómica**:
-   - Actualiza `TokenRecuperacion` (estado = USADO, fecha_uso = now(), ip_uso)
+   - Actualiza `TokenRecuperacion` (estado = USADO, fecha_uso = now())
    - Actualiza `CuentaUsuario` (email_verificado = true, estado = ACTIVA)
 5. Sistema registra en `LogAutenticacion` (tipo = VERIFICACION_EMAIL, resultado = EXITOSO)
 6. Evento: `EmailVerificado`
@@ -173,7 +173,7 @@ AUTENTICACION es el guardián del acceso. Controla QUIÉN puede entrar al sistem
    - Crea `SesionUsuario`:
      - estado = ACTIVA
      - fecha_expiracion = now() + TTL (7 días cliente, 8h empleado)
-     - dispositivo, ip_address, ubicacion desde request
+     - dispositivo desde User-Agent header
    - Registra en `LogAutenticacion` (resultado = EXITOSO)
    - Retorna ambos tokens
 6. Evento: `LoginExitoso`
@@ -290,7 +290,6 @@ AUTENTICACION es el guardián del acceso. Controla QUIÉN puede entrar al sistem
 6. Sistema crea `TokenRecuperacion`:
    - tipo = RECUPERACION_PASSWORD
    - fecha_expiracion = now() + 1 hora
-   - ip_solicitud desde request
 7. Sistema registra en `LogAutenticacion` (tipo = RECUPERACION_PASSWORD_SOLICITUD)
 8. Sistema envía email con link de reset (contiene token en URL)
 9. Retorna 200 OK (SIEMPRE, incluso si email no existe - anti-enumeración)
@@ -328,7 +327,6 @@ AUTENTICACION es el guardián del acceso. Controla QUIÉN puede entrar al sistem
    - Actualiza `TokenRecuperacion`:
      - `estado = USADO`
      - `fecha_uso = now()`
-     - `ip_uso` desde request
    - Revoca TODAS las sesiones activas (forzar re-login)
 6. Sistema registra en `LogAutenticacion` (tipo = RECUPERACION_PASSWORD_USO, resultado = EXITOSO)
 7. Evento: `PasswordRecuperado`
@@ -712,7 +710,6 @@ CREATE UNIQUE INDEX idx_token_recuperacion_hash ON token_recuperacion (token_has
 -- Auditoría
 CREATE INDEX idx_log_email_fecha ON log_autenticacion (email_intento, fecha_evento);
 CREATE INDEX idx_log_cuenta_fecha ON log_autenticacion (cuenta_usuario_id, fecha_evento) WHERE cuenta_usuario_id IS NOT NULL;
-CREATE INDEX idx_log_ip_fecha ON log_autenticacion (ip_address, fecha_evento);
 ```
 
 ---
@@ -1017,7 +1014,7 @@ Definidos en `CONFIGURACION`:
 ### GET /auth/sessions (Requiere autenticación)
 
 - Headers: `Authorization: Bearer {access_token}`
-- Response 200: `[ { id, dispositivo, ip_address, ubicacion, fecha_creacion, fecha_ultimo_uso } ]`
+- Response 200: `[ { id, dispositivo, fecha_creacion, fecha_ultimo_uso } ]`
 
 ### DELETE /auth/sessions/:id (Requiere autenticación)
 

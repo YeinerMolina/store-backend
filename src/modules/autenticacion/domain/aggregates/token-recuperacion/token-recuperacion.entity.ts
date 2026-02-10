@@ -1,20 +1,6 @@
 import { TipoTokenRecuperacion, EstadoToken } from '../types';
-import type {
-  TokenRecuperacionProps,
-  OpcionesUsoToken,
-} from './token-recuperacion.types';
+import type { TokenRecuperacionProps } from './token-recuperacion.types';
 
-/**
- * Entidad hija: TokenRecuperacion
- *
- * Representa un token temporal para recuperación de password o verificación de email.
- * Pertenece al agregado CuentaUsuario.
- *
- * Invariantes:
- * - tokenHash es inmutable
- * - Un token USADO no puede volver a PENDIENTE
- * - fechaExpiracion es inmutable
- */
 export class TokenRecuperacion {
   readonly #id: string;
   readonly #cuentaUsuarioId: string;
@@ -24,8 +10,6 @@ export class TokenRecuperacion {
   readonly #fechaCreacion: Date;
   readonly #fechaExpiracion: Date;
   #fechaUso: Date | null;
-  readonly #ipSolicitud: string | null;
-  #ipUso: string | null;
 
   get id(): string {
     return this.#id;
@@ -55,12 +39,8 @@ export class TokenRecuperacion {
     return this.#fechaUso;
   }
 
-  get ipSolicitud(): string | null {
-    return this.#ipSolicitud;
-  }
-
-  get ipUso(): string | null {
-    return this.#ipUso;
+  get tokenHash(): string {
+    return this.#tokenHash;
   }
 
   private constructor(props: TokenRecuperacionProps) {
@@ -72,11 +52,9 @@ export class TokenRecuperacion {
     this.#fechaCreacion = props.fechaCreacion;
     this.#fechaExpiracion = props.fechaExpiracion;
     this.#fechaUso = props.fechaUso;
-    this.#ipSolicitud = props.ipSolicitud;
-    this.#ipUso = props.ipUso;
   }
 
-  static reconstituir(props: TokenRecuperacionProps): TokenRecuperacion {
+  static desde(props: TokenRecuperacionProps): TokenRecuperacion {
     return new TokenRecuperacion(props);
   }
 
@@ -107,18 +85,10 @@ export class TokenRecuperacion {
     return this.#estado === EstadoToken.EXPIRADO;
   }
 
-  /**
-   * Mantiene el token hash encapsulado dentro del aggregate.
-   * Sigue el principio "Tell, Don't Ask" para proteger secretos del dominio.
-   */
   verificarToken(tokenHash: string): boolean {
     return this.#tokenHash === tokenHash;
   }
 
-  /**
-   * Validates token state before marking as used.
-   * Uses early returns to avoid nested conditionals.
-   */
   private validarEstadoParaUso(): void {
     if (this.#estado === EstadoToken.USADO) {
       throw new Error('El token ya fue usado');
@@ -137,16 +107,11 @@ export class TokenRecuperacion {
     }
   }
 
-  /**
-   * Side effects:
-   * - Registra metadata de auditoría (cuándo y desde qué IP se usó)
-   */
-  marcarComoUsado(opciones?: OpcionesUsoToken): void {
+  marcarComoUsado(): void {
     this.validarEstadoParaUso();
 
     this.#estado = EstadoToken.USADO;
     this.#fechaUso = new Date();
-    this.#ipUso = opciones?.ipUso ?? null;
   }
 
   invalidar(): void {

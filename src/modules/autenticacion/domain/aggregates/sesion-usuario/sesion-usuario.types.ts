@@ -4,8 +4,6 @@ export interface CrearSesionUsuarioProps {
   cuentaUsuarioId: string;
   refreshTokenHash: string;
   dispositivo?: string;
-  ipAddress?: string;
-  ubicacion?: string;
   fechaExpiracion: Date;
 }
 
@@ -14,8 +12,6 @@ export interface SesionUsuarioProps {
   cuentaUsuarioId: string;
   refreshTokenHash: string;
   dispositivo: string | null;
-  ipAddress: string | null;
-  ubicacion: string | null;
   estado: EstadoSesion;
   fechaCreacion: Date;
   fechaExpiracion: Date;
@@ -29,8 +25,6 @@ export interface SesionUsuarioData {
   readonly id: string;
   readonly cuentaUsuarioId: string;
   readonly dispositivo: string | null;
-  readonly ipAddress: string | null;
-  readonly ubicacion: string | null;
   readonly estado: EstadoSesion;
   readonly fechaCreacion: Date;
   readonly fechaExpiracion: Date;

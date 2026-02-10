@@ -1,15 +1,13 @@
 import { IdGenerator } from '@shared/domain/factories';
-import { SesionUsuario } from '../aggregates/cuenta-usuario/sesion-usuario.entity';
-import { EstadoSesion } from '../aggregates/cuenta-usuario/types';
+import { SesionUsuario } from '../aggregates/sesion-usuario/sesion-usuario.entity';
+import { EstadoSesion } from '../aggregates/types';
 import type {
   CrearSesionUsuarioProps,
   SesionUsuarioProps,
-} from '../aggregates/cuenta-usuario/sesion-usuario.types';
+} from '../aggregates/sesion-usuario/sesion-usuario.types';
 
 export class SesionUsuarioFactory {
   /**
-   * Crea una nueva sesión de usuario.
-   *
    * Side effects:
    * - Genera ID con UUID v7
    * - Inicializa fechaCreacion
@@ -21,8 +19,6 @@ export class SesionUsuarioFactory {
       cuentaUsuarioId: props.cuentaUsuarioId,
       refreshTokenHash: props.refreshTokenHash,
       dispositivo: props.dispositivo ?? null,
-      ipAddress: props.ipAddress ?? null,
-      ubicacion: props.ubicacion ?? null,
       estado: EstadoSesion.ACTIVA,
       fechaCreacion: new Date(),
       fechaExpiracion: props.fechaExpiracion,
@@ -32,6 +28,6 @@ export class SesionUsuarioFactory {
       motivoRevocacion: null,
     };
 
-    return SesionUsuario.reconstituir(sesionProps);
+    return SesionUsuario.desde(sesionProps);
   }
 }

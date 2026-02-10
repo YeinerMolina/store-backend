@@ -1,20 +1,16 @@
 import { IdGenerator } from '@shared/domain/factories';
 import { CuentaUsuario } from '../aggregates/cuenta-usuario/cuenta-usuario.entity';
-import { TipoUsuario, EstadoCuenta } from '../aggregates/cuenta-usuario/types';
+import { TipoUsuario, EstadoCuenta } from '../aggregates/types';
 import type {
   CrearCuentaUsuarioProps,
   CuentaUsuarioProps,
 } from '../aggregates/cuenta-usuario/cuenta-usuario.types';
 
 /**
- * Factory para crear instancias de CuentaUsuario.
- *
  * Usa UUID v7 para IDs temporalmente ordenados (mejor rendimiento en índices).
  */
 export class CuentaUsuarioFactory {
   /**
-   * Crea una nueva cuenta de usuario (para clientes o empleados).
-   *
    * Side effects:
    * - Genera ID con UUID v7
    * - Inicializa fechas de creación y modificación
@@ -41,7 +37,7 @@ export class CuentaUsuarioFactory {
       fechaModificacion: ahora,
     };
 
-    return CuentaUsuario.reconstituir(cuentaProps);
+    return CuentaUsuario.desde(cuentaProps);
   }
 
   /**

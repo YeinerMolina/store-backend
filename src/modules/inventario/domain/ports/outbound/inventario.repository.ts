@@ -2,7 +2,7 @@ import { Inventario } from '../../aggregates/inventario/inventario.entity';
 import { Reserva } from '../../aggregates/inventario/reserva.entity';
 import { MovimientoInventario } from '../../aggregates/inventario/movimiento-inventario.entity';
 import { INVENTARIO_REPOSITORY_TOKEN } from '../tokens';
-import type { TransactionContext } from './transaction-manager.port';
+import type { TransactionContext } from '@shared/database';
 
 export { INVENTARIO_REPOSITORY_TOKEN, TransactionContext };
 

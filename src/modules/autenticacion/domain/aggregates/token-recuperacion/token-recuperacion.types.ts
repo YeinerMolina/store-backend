@@ -5,7 +5,6 @@ export interface CrearTokenRecuperacionProps {
   tipoToken: TipoTokenRecuperacion;
   tokenHash: string;
   fechaExpiracion: Date;
-  ipSolicitud?: string;
 }
 
 export interface TokenRecuperacionProps {
@@ -17,8 +16,6 @@ export interface TokenRecuperacionProps {
   fechaCreacion: Date;
   fechaExpiracion: Date;
   fechaUso: Date | null;
-  ipSolicitud: string | null;
-  ipUso: string | null;
 }
 
 export interface TokenRecuperacionData {
@@ -29,8 +26,4 @@ export interface TokenRecuperacionData {
   readonly fechaCreacion: Date;
   readonly fechaExpiracion: Date;
   readonly fechaUso: Date | null;
-}
-
-export interface OpcionesUsoToken {
-  ipUso?: string;
 }

@@ -5,7 +5,7 @@ import {
 } from '../../domain/exceptions';
 import type { InventarioRepository } from '../../domain/ports/outbound/inventario.repository';
 import type { EventBusPort } from '../../domain/ports/outbound/event-bus.port';
-import type { TransactionManager } from '../../domain/ports/outbound/transaction-manager.port';
+import type { TransactionManager } from '@shared/database';
 import type { ConfiguracionPort } from '../../domain/ports/outbound/configuracion.port';
 import {
   TipoOperacionEnum,

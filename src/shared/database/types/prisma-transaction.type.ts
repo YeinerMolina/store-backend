@@ -1,8 +1,8 @@
 import type { PrismaClient } from '@prisma/client';
 
 /**
- * Contexto transaccional de Prisma.
- * Prisma pasa el cliente completo con mismo API dentro de transacciones.
+ * Prisma passes the full client with identical API inside transactions.
+ * Omits methods that aren't available in transaction context.
  */
 export type PrismaTransactionClient = Omit<
   PrismaClient,

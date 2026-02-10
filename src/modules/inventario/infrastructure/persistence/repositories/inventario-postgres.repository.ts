@@ -15,9 +15,8 @@ import type {
 import { PrismaInventarioMapper } from '../mappers/prisma-inventario.mapper';
 import { PrismaMovimientoInventarioMapper } from '../mappers/prisma-movimiento-inventario.mapper';
 import { PrismaReservaMapper } from '../mappers/prisma-reserva.mapper';
-import { PrismaService } from '../../../../../shared/database/prisma.service';
 import { OptimisticLockingError } from '../../../domain/exceptions';
-import type { PrismaTransactionClient } from '../types/prisma-transaction.type';
+import { PrismaService, type PrismaTransactionClient } from '@shared/database';
 
 @Injectable()
 export class InventarioPostgresRepository implements InventarioRepository {

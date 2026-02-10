@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { InventarioApplicationService } from '../application/services/inventario-application.service';
 import { InventarioPostgresRepository } from './persistence/repositories/inventario-postgres.repository';
-import { PrismaTransactionManager } from './persistence/prisma-transaction-manager';
+import { PrismaTransactionManager } from '@shared/database';
 import { InventarioController } from './controllers/inventario.controller';
 import { InventarioJobsService } from './jobs/inventario-jobs.service';
 import { ConfiguracionStubAdapter } from './adapters/configuracion-stub.adapter';
@@ -17,19 +17,18 @@ import { SharedModule } from '@shared/shared.module';
  * Inventario module - complete DDD aggregate with full lifecycle management.
  *
  * Imports:
- * - SharedModule: Provides PrismaService and EventBusModule
+ * - SharedModule: Provides PrismaService, PrismaTransactionManager, and EventBusModule
  *
  * Architecture:
  * - Single repository enforces DDD aggregate boundaries: all internal
  *   entities (Reserva, MovimientoInventario) must go through Inventario root
  * - Event-driven: publishes domain events via EVENT_BUS_PORT_TOKEN
- * - Transaction management: coordinates multi-table operations
+ * - Transaction management: coordinates multi-table operations via shared PrismaTransactionManager
  */
 @Module({
   imports: [SharedModule],
   providers: [
     InventarioPostgresRepository,
-    PrismaTransactionManager,
     InventarioJobsService,
     {
       provide: INVENTARIO_REPOSITORY_TOKEN,
@@ -37,7 +36,7 @@ import { SharedModule } from '@shared/shared.module';
     },
     {
       provide: TRANSACTION_MANAGER_TOKEN,
-      useClass: PrismaTransactionManager,
+      useExisting: PrismaTransactionManager,
     },
     {
       provide: CONFIGURACION_PORT_TOKEN,

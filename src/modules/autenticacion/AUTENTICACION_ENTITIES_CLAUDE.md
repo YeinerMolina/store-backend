@@ -96,8 +96,6 @@ CREATE INDEX idx_cuenta_usuario_estado ON cuenta_usuario (estado);
 | `cuenta_usuario_id`  | uuid         | FK, not null              | FK → CuentaUsuario                         |
 | `refresh_token_hash` | varchar(255) | not null, unique          | Hash SHA-256 del refresh token             |
 | `dispositivo`        | varchar(200) | nullable                  | User-Agent o identificador del dispositivo |
-| `ip_address`         | varchar(45)  | nullable                  | IP desde donde se creó (IPv6 compatible)   |
-| `ubicacion`          | varchar(100) | nullable                  | Ubicación aproximada (país/ciudad)         |
 | `estado`             | enum         | not null, default: ACTIVA | ACTIVA, REVOCADA, EXPIRADA                 |
 | `fecha_creacion`     | timestamp    | not null, default: now()  | Momento de creación del token              |
 | `fecha_expiracion`   | timestamp    | not null                  | Momento de expiración                      |
@@ -149,8 +147,6 @@ CREATE INDEX idx_sesion_usuario_expiracion ON sesion_usuario (estado, fecha_expi
 | `fecha_creacion`    | timestamp    | not null, default: now()     | Momento de creación                       |
 | `fecha_expiracion`  | timestamp    | not null                     | Momento de expiración                     |
 | `fecha_uso`         | timestamp    | nullable                     | Cuando fue usado                          |
-| `ip_solicitud`      | varchar(45)  | nullable                     | IP desde donde se solicitó                |
-| `ip_uso`            | varchar(45)  | nullable                     | IP desde donde se usó                     |
 
 **Foreign Keys**:
 
@@ -191,9 +187,7 @@ CREATE INDEX idx_token_recuperacion_tipo_estado ON token_recuperacion (tipo_toke
 | `tipo_evento`       | enum         | not null                 | Ver tipos abajo                               |
 | `resultado`         | enum         | not null                 | EXITOSO, FALLIDO                              |
 | `motivo_fallo`      | varchar(100) | nullable                 | Razón del fallo (ej: "Password incorrecto")   |
-| `ip_address`        | varchar(45)  | not null                 | IP del intento                                |
 | `user_agent`        | varchar(500) | nullable                 | User-Agent del navegador                      |
-| `ubicacion`         | varchar(100) | nullable                 | Ubicación aproximada                          |
 | `metadata`          | jsonb        | nullable                 | Datos adicionales (ej: dispositivo, admin_id) |
 | `fecha_evento`      | timestamp    | not null, default: now() | Momento del evento                            |
 
@@ -209,7 +203,6 @@ FOREIGN KEY (cuenta_usuario_id) REFERENCES cuenta_usuario(id) ON DELETE SET NULL
 CREATE INDEX idx_log_auth_email_fecha ON log_autenticacion (email_intento, fecha_evento);
 CREATE INDEX idx_log_auth_cuenta_fecha ON log_autenticacion (cuenta_usuario_id, fecha_evento) WHERE cuenta_usuario_id IS NOT NULL;
 CREATE INDEX idx_log_auth_tipo_fecha ON log_autenticacion (tipo_evento, fecha_evento);
-CREATE INDEX idx_log_auth_ip_fecha ON log_autenticacion (ip_address, fecha_evento);
 ```
 
 **Restricción**: Tabla **INSERT-only**. No permite UPDATE ni DELETE (auditoría inmutable).
@@ -395,8 +388,6 @@ Table sesion_usuario {
   cuenta_usuario_id uuid [not null, ref: > cuenta_usuario.id]
   refresh_token_hash varchar(255) [not null, unique, note: 'SHA-256 del refresh token opaco']
   dispositivo varchar(200)
-  ip_address varchar(45)
-  ubicacion varchar(100)
   estado estado_sesion [not null, default: 'ACTIVA']
   fecha_creacion timestamp [not null, default: `now()`]
   fecha_expiracion timestamp [not null]
@@ -424,8 +415,6 @@ Table token_recuperacion {
   fecha_creacion timestamp [not null, default: `now()`]
   fecha_expiracion timestamp [not null]
   fecha_uso timestamp
-  ip_solicitud varchar(45)
-  ip_uso varchar(45)
 
   indexes {
     cuenta_usuario_id [name: 'idx_token_recuperacion_cuenta']
@@ -443,9 +432,7 @@ Table log_autenticacion {
   tipo_evento tipo_evento_auth [not null]
   resultado resultado_auth [not null]
   motivo_fallo varchar(100)
-  ip_address varchar(45) [not null]
   user_agent varchar(500)
-  ubicacion varchar(100)
   metadata jsonb
   fecha_evento timestamp [not null, default: `now()`]
 
@@ -453,7 +440,6 @@ Table log_autenticacion {
     (email_intento, fecha_evento) [name: 'idx_log_auth_email_fecha']
     (cuenta_usuario_id, fecha_evento) [name: 'idx_log_auth_cuenta_fecha']
     (tipo_evento, fecha_evento) [name: 'idx_log_auth_tipo_fecha']
-    (ip_address, fecha_evento) [name: 'idx_log_auth_ip_fecha']
   }
 
   note: 'INSERT-only. Auditoría inmutable de autenticación.'
@@ -598,7 +584,7 @@ Jobs background para:
 
 ### Cumplimiento
 
-- **GDPR/CCPA**: `email`, `ip_address`, `ubicacion` son datos personales
+- **GDPR/CCPA**: `email`, `user_agent`, `dispositivo` son datos personales
 - Permitir exportación de datos del usuario
 - Implementar eliminación completa (derecho al olvido)
 

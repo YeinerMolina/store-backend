@@ -2,11 +2,15 @@ import { TipoUsuario, EstadoCuenta } from '../types';
 import type {
   CuentaUsuarioProps,
   ResultadoAutenticacion,
-  OpcionesBloqueo,
 } from './cuenta-usuario.types';
 import { SesionUsuario } from '../sesion-usuario/sesion-usuario.entity';
 import { TokenRecuperacion } from '../token-recuperacion/token-recuperacion.entity';
 import { PropietarioCuenta } from '../../value-objects';
+import {
+  EmailNoVerificadoError,
+  CuentaInactivaError,
+  CuentaBloqueadaError,
+} from '../../exceptions';
 
 /**
  * Aggregate root para cuentas de usuario (clientes y empleados).
@@ -24,6 +28,7 @@ export class CuentaUsuario {
   #estado: EstadoCuenta;
   #emailVerificado: boolean;
   #intentosFallidos: number;
+  #numeroBloqueos: number;
   #bloqueadoHasta: Date | null;
   #ultimoLogin: Date | null;
   #ultimoCambioPassword: Date | null;
@@ -67,6 +72,10 @@ export class CuentaUsuario {
 
   get intentosFallidos(): number {
     return this.#intentosFallidos;
+  }
+
+  get numeroBloqueos(): number {
+    return this.#numeroBloqueos;
   }
 
   get bloqueadoHasta(): Date | null {
@@ -119,6 +128,7 @@ export class CuentaUsuario {
     this.#estado = props.estado;
     this.#emailVerificado = props.emailVerificado;
     this.#intentosFallidos = props.intentosFallidos;
+    this.#numeroBloqueos = props.numeroBloqueos;
     this.#bloqueadoHasta = props.bloqueadoHasta;
     this.#ultimoLogin = props.ultimoLogin;
     this.#ultimoCambioPassword = props.ultimoCambioPassword;
@@ -146,14 +156,14 @@ export class CuentaUsuario {
     if (this.#estado === EstadoCuenta.PENDIENTE_VERIFICACION) {
       return {
         exito: false,
-        motivoFallo: 'Email no verificado',
+        error: new EmailNoVerificadoError(),
       };
     }
 
     if (this.#estado === EstadoCuenta.INACTIVA) {
       return {
         exito: false,
-        motivoFallo: 'Cuenta deshabilitada',
+        error: new CuentaInactivaError(),
       };
     }
 
@@ -162,7 +172,7 @@ export class CuentaUsuario {
       if (this.#bloqueadoHasta && this.#bloqueadoHasta > ahora) {
         return {
           exito: false,
-          motivoFallo: `Cuenta bloqueada hasta ${this.#bloqueadoHasta.toISOString()}`,
+          error: new CuentaBloqueadaError(this.#bloqueadoHasta),
         };
       }
 
@@ -195,13 +205,13 @@ export class CuentaUsuario {
    */
   registrarIntentoFallido(
     maxIntentos: number,
-    opcionesBloqueo: OpcionesBloqueo,
+    minutosBloqueoInicial: number,
   ): void {
     this.#intentosFallidos += 1;
     this.#fechaModificacion = new Date();
 
     if (this.#intentosFallidos >= maxIntentos) {
-      this.bloquearCuenta(opcionesBloqueo);
+      this.bloquearCuenta(minutosBloqueoInicial);
     }
   }
 
@@ -224,10 +234,11 @@ export class CuentaUsuario {
     return minutosBloqueoInicial * 288;
   }
 
-  private bloquearCuenta(opciones: OpcionesBloqueo): void {
-    const { numeroBloqueo, minutosBloqueoInicial } = opciones;
+  private bloquearCuenta(minutosBloqueoInicial: number): void {
+    this.#numeroBloqueos += 1;
+
     const minutosBloqueo = this.calcularMinutosBloqueo(
-      numeroBloqueo,
+      this.#numeroBloqueos,
       minutosBloqueoInicial,
     );
 

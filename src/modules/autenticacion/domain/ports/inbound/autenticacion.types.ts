@@ -60,3 +60,12 @@ export interface SesionInfo {
   fechaUltimoUso: Date | null;
   fechaExpiracion: Date;
 }
+
+export interface InformacionCuenta {
+  accountId: string;
+  email: string;
+  tipoUsuario: string;
+  userId: string;
+  emailVerificado: boolean;
+  ultimoLogin: Date | null;
+}

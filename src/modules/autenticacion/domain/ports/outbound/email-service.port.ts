@@ -1,11 +1,6 @@
-/**
- * Puerto para envío de emails transaccionales.
- * Abstrae el proveedor de email (COMUNICACION module).
- */
 export interface EmailService {
   /**
-   * Side effects:
-   * - Envía email asíncrono vía módulo COMUNICACION
+   * Envío asíncrono vía módulo COMUNICACION sin esperar confirmación de entrega.
    */
   enviarEmailVerificacion(
     email: string,

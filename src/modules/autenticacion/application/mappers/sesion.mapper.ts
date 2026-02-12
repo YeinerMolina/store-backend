@@ -8,9 +8,7 @@ export class SesionMapper {
       id: sesion.id,
       dispositivo: sesion.dispositivo,
       fechaCreacion: sesion.fechaCreacion.toISOString(),
-      fechaUltimoUso: sesion.fechaUltimoUso
-        ? sesion.fechaUltimoUso.toISOString()
-        : null,
+      fechaUltimoUso: sesion.fechaUltimoUso?.toISOString() ?? null,
       fechaExpiracion: sesion.fechaExpiracion.toISOString(),
     };
   }

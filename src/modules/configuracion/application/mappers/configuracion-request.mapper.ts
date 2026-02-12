@@ -9,7 +9,7 @@ import type {
   CrearParametroOperativoRequestDto,
   CrearPoliticaRequestDto,
   PublicarPoliticaRequestDto,
-} from '../dto/configuracion-request.dto';
+} from '../dto';
 
 export class ConfiguracionRequestMapper {
   static toCrearParametroProps(

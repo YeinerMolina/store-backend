@@ -1,13 +1,7 @@
-/**
- * Puerto para interacción con módulo IDENTIDAD (gestión de Empleados).
- */
+import type { EmpleadoBasicInfo } from './empleado.types';
+
 export interface EmpleadoPort {
-  buscarPorId(empleadoId: string): Promise<{
-    id: string;
-    nombre: string;
-    apellido: string;
-    email: string | null;
-  } | null>;
+  buscarPorId(empleadoId: string): Promise<EmpleadoBasicInfo | null>;
 
   existePorId(empleadoId: string): Promise<boolean>;
 }

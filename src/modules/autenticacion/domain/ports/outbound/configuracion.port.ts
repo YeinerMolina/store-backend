@@ -1,6 +1,3 @@
-/**
- * Puerto para obtener parámetros operativos del módulo CONFIGURACION.
- */
 export interface ConfiguracionPort {
   obtenerMaxIntentosLogin(): Promise<number>;
   obtenerMinutosBloqueoInicial(): Promise<number>;

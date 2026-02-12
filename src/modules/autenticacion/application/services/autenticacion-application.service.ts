@@ -30,6 +30,9 @@ import {
   EMPLEADO_PORT_TOKEN,
   CONFIGURACION_PORT_TOKEN,
 } from '../../domain/ports/tokens';
+import { CuentaUsuario } from '../../domain/aggregates/cuenta-usuario/cuenta-usuario.entity';
+import { SesionUsuario } from '../../domain/aggregates/sesion-usuario/sesion-usuario.entity';
+import { TokenRecuperacion } from '../../domain/aggregates/token-recuperacion/token-recuperacion.entity';
 import { CuentaUsuarioFactory } from '../../domain/factories/cuenta-usuario.factory';
 import { SesionUsuarioFactory } from '../../domain/factories/sesion-usuario.factory';
 import { TokenRecuperacionFactory } from '../../domain/factories/token-recuperacion.factory';
@@ -38,6 +41,7 @@ import {
   EstadoSesion,
   TipoTokenRecuperacion,
   EstadoToken,
+  EstadoCuenta,
 } from '../../domain/aggregates/types';
 import { SesionMapper } from '../mappers/sesion.mapper';
 import {
@@ -97,21 +101,10 @@ export class AutenticacionApplicationService implements AutenticacionService {
       clienteId,
     });
 
-    const token = this.tokenGenerator.generate();
-    const tokenHash = this.tokenGenerator.hash(token);
-
-    const horasExpiracion =
-      await this.configuracionPort.obtenerHorasExpiracionTokenVerificacion();
-    const fechaExpiracion = new Date(
-      Date.now() + horasExpiracion * 60 * 60 * 1000,
+    const { token, tokenRecuperacion } = await this.crearTokenRecuperacion(
+      cuenta.id,
+      TipoTokenRecuperacion.VERIFICACION_EMAIL,
     );
-
-    const tokenRecuperacion = TokenRecuperacionFactory.crear({
-      cuentaUsuarioId: cuenta.id,
-      tipoToken: TipoTokenRecuperacion.VERIFICACION_EMAIL,
-      tokenHash,
-      fechaExpiracion,
-    });
 
     cuenta.agregarTokenRecuperacion(tokenRecuperacion);
 
@@ -135,16 +128,8 @@ export class AutenticacionApplicationService implements AutenticacionService {
     }
 
     const resultadoAuth = cuenta.puedeAutenticarse();
-    if (!resultadoAuth.exito) {
-      if (resultadoAuth.motivoFallo?.includes('Email no verificado')) {
-        throw new EmailNoVerificadoError();
-      }
-      if (resultadoAuth.motivoFallo?.includes('Cuenta deshabilitada')) {
-        throw new CuentaInactivaError();
-      }
-      if (resultadoAuth.motivoFallo?.includes('Cuenta bloqueada')) {
-        throw new CuentaBloqueadaError(cuenta.bloqueadoHasta!);
-      }
+    if (!resultadoAuth.exito && resultadoAuth.error) {
+      throw resultadoAuth.error;
     }
 
     const passwordValido = await this.passwordHasher.compare(
@@ -153,70 +138,21 @@ export class AutenticacionApplicationService implements AutenticacionService {
     );
 
     if (!passwordValido) {
-      const maxIntentos =
-        await this.configuracionPort.obtenerMaxIntentosLogin();
-      const minutosBloqueoInicial =
-        await this.configuracionPort.obtenerMinutosBloqueoInicial();
-
-      cuenta.registrarIntentoFallido(maxIntentos, {
-        numeroBloqueo: 1,
-        minutosBloqueoInicial,
-      });
-
-      await this.cuentaRepository.guardar(cuenta, {});
-
-      if (cuenta.estado === 'BLOQUEADA') {
-        await this.emailService.enviarEmailCuentaBloqueada(
-          cuenta.email,
-          '',
-          cuenta.bloqueadoHasta!,
-        );
-      }
-
+      await this.manejarLoginFallido(cuenta);
       throw new CredencialesInvalidasError();
     }
 
     cuenta.registrarLoginExitoso();
 
-    const userId = cuenta.propietario.getId();
-
-    const { token: accessToken, expiresIn } =
-      await this.jwtService.generateAccessToken(
-        cuenta.id,
-        userId,
-        cuenta.tipoUsuario,
-      );
-
-    const refreshToken = this.tokenGenerator.generate();
-    const refreshTokenHash = this.tokenGenerator.hash(refreshToken);
-
-    const ttlHoras =
-      cuenta.tipoUsuario === TipoUsuario.CLIENTE
-        ? (await this.configuracionPort.obtenerTTLRefreshTokenClienteDias()) *
-          24
-        : await this.configuracionPort.obtenerTTLRefreshTokenEmpleadoHoras();
-
-    const fechaExpiracion = new Date(Date.now() + ttlHoras * 60 * 60 * 1000);
-
-    const sesion = SesionUsuarioFactory.crear({
-      cuentaUsuarioId: cuenta.id,
-      refreshTokenHash,
-      dispositivo: data.userAgent,
-      fechaExpiracion,
-    });
-
-    cuenta.agregarSesion(sesion);
-
-    await this.cuentaRepository.guardar(cuenta, {
-      sesiones: { nuevas: [sesion] },
-    });
+    const { accessToken, refreshToken, expiresIn } =
+      await this.crearNuevaSesion(cuenta, data.userAgent);
 
     return {
       accessToken,
       refreshToken,
       expiresIn,
       userType: cuenta.tipoUsuario,
-      userId,
+      userId: cuenta.propietario.getId(),
       requiereCambioPassword: cuenta.requiereCambioPassword(),
     };
   }
@@ -230,12 +166,7 @@ export class AutenticacionApplicationService implements AutenticacionService {
       throw new SesionInvalidaError();
     }
 
-    const sesion = cuenta.sesiones.find(
-      (s) =>
-        s.refreshTokenHash === refreshTokenHash &&
-        s.estado === EstadoSesion.ACTIVA,
-    );
-
+    const sesion = this.buscarSesionActiva(cuenta, refreshTokenHash);
     if (!sesion) {
       throw new SesionInvalidaError();
     }
@@ -259,13 +190,9 @@ export class AutenticacionApplicationService implements AutenticacionService {
     const nuevoRefreshToken = this.tokenGenerator.generate();
     const nuevoRefreshTokenHash = this.tokenGenerator.hash(nuevoRefreshToken);
 
-    const ttlHoras =
-      cuenta.tipoUsuario === TipoUsuario.CLIENTE
-        ? (await this.configuracionPort.obtenerTTLRefreshTokenClienteDias()) *
-          24
-        : await this.configuracionPort.obtenerTTLRefreshTokenEmpleadoHoras();
-
-    const fechaExpiracion = new Date(Date.now() + ttlHoras * 60 * 60 * 1000);
+    const fechaExpiracion = await this.calcularFechaExpiracionRefreshToken(
+      cuenta.tipoUsuario,
+    );
 
     const nuevaSesion = SesionUsuarioFactory.crear({
       cuentaUsuarioId: cuenta.id,
@@ -300,12 +227,7 @@ export class AutenticacionApplicationService implements AutenticacionService {
       return;
     }
 
-    const sesion = cuenta.sesiones.find(
-      (s) =>
-        s.refreshTokenHash === refreshTokenHash &&
-        s.estado === EstadoSesion.ACTIVA,
-    );
-
+    const sesion = this.buscarSesionActiva(cuenta, refreshTokenHash);
     if (!sesion) {
       return;
     }
@@ -325,11 +247,10 @@ export class AutenticacionApplicationService implements AutenticacionService {
       throw new TokenInvalidoError();
     }
 
-    const token = cuenta.tokensRecuperacion.find(
-      (t) =>
-        t.tokenHash === tokenHash &&
-        t.tipoToken === TipoTokenRecuperacion.VERIFICACION_EMAIL &&
-        t.estado === EstadoToken.PENDIENTE,
+    const token = this.buscarTokenRecuperacionPendiente(
+      cuenta,
+      tokenHash,
+      TipoTokenRecuperacion.VERIFICACION_EMAIL,
     );
 
     if (!token) {
@@ -360,22 +281,10 @@ export class AutenticacionApplicationService implements AutenticacionService {
       return;
     }
 
-    const token = this.tokenGenerator.generate();
-    const tokenHash = this.tokenGenerator.hash(token);
-
-    const minutosExpiracion =
-      await this.configuracionPort.obtenerMinutosExpiracionTokenRecuperacion();
-
-    const fechaExpiracion = new Date(
-      Date.now() + minutosExpiracion * 60 * 1000,
+    const { token, tokenRecuperacion } = await this.crearTokenRecuperacion(
+      cuenta.id,
+      TipoTokenRecuperacion.RECUPERACION_PASSWORD,
     );
-
-    const tokenRecuperacion = TokenRecuperacionFactory.crear({
-      cuentaUsuarioId: cuenta.id,
-      tipoToken: TipoTokenRecuperacion.RECUPERACION_PASSWORD,
-      tokenHash,
-      fechaExpiracion,
-    });
 
     cuenta.agregarTokenRecuperacion(tokenRecuperacion);
 
@@ -400,11 +309,10 @@ export class AutenticacionApplicationService implements AutenticacionService {
       throw new TokenInvalidoError();
     }
 
-    const token = cuenta.tokensRecuperacion.find(
-      (t) =>
-        t.tokenHash === tokenHash &&
-        t.tipoToken === TipoTokenRecuperacion.RECUPERACION_PASSWORD &&
-        t.estado === EstadoToken.PENDIENTE,
+    const token = this.buscarTokenRecuperacionPendiente(
+      cuenta,
+      tokenHash,
+      TipoTokenRecuperacion.RECUPERACION_PASSWORD,
     );
 
     if (!token) {
@@ -421,13 +329,8 @@ export class AutenticacionApplicationService implements AutenticacionService {
     cuenta.desbloquearYResetearIntentos();
     token.marcarComoUsado();
 
-    const sesionesActivas = Array.from(cuenta.sesiones).filter(
-      (s) => s.estado === EstadoSesion.ACTIVA,
-    );
-
-    sesionesActivas.forEach((s) =>
-      s.revocar({ motivo: 'Recuperación de contraseña' }),
-    );
+    const sesionesActivas = this.obtenerSesionesActivasDeCuenta(cuenta);
+    this.revocarSesionesActivas(sesionesActivas, 'Recuperación de contraseña');
 
     await this.cuentaRepository.guardar(cuenta, {
       tokensRecuperacion: { actualizados: [token] },
@@ -457,17 +360,11 @@ export class AutenticacionApplicationService implements AutenticacionService {
 
     cuenta.cambiarPassword(nuevoPasswordHash);
 
-    let sesionesActualizadas: any[] = [];
+    let sesionesActualizadas: SesionUsuario[] = [];
 
     if (data.revocarOtrasSesiones) {
-      const sesionesActivas = Array.from(cuenta.sesiones).filter(
-        (s) => s.estado === EstadoSesion.ACTIVA,
-      );
-
-      sesionesActivas.forEach((s) =>
-        s.revocar({ motivo: 'Cambio de contraseña' }),
-      );
-
+      const sesionesActivas = this.obtenerSesionesActivasDeCuenta(cuenta);
+      this.revocarSesionesActivas(sesionesActivas, 'Cambio de contraseña');
       sesionesActualizadas = sesionesActivas;
     }
 
@@ -529,12 +426,10 @@ export class AutenticacionApplicationService implements AutenticacionService {
       throw new CuentaNoEncontradaError(accountId);
     }
 
-    const sesionesActivas = Array.from(cuenta.sesiones).filter(
-      (s) => s.estado === EstadoSesion.ACTIVA,
-    );
-
-    sesionesActivas.forEach((s) =>
-      s.revocar({ motivo: 'Revocación masiva por usuario' }),
+    const sesionesActivas = this.obtenerSesionesActivasDeCuenta(cuenta);
+    this.revocarSesionesActivas(
+      sesionesActivas,
+      'Revocación masiva por usuario',
     );
 
     await this.cuentaRepository.guardar(cuenta, {
@@ -550,9 +445,7 @@ export class AutenticacionApplicationService implements AutenticacionService {
       throw new CuentaNoEncontradaError(accountId);
     }
 
-    const sesionesActivas = Array.from(cuenta.sesiones).filter(
-      (s) => s.estado === EstadoSesion.ACTIVA,
-    );
+    const sesionesActivas = this.obtenerSesionesActivasDeCuenta(cuenta);
 
     return sesionesActivas.map((s) => SesionMapper.toSesionInfo(s));
   }
@@ -601,5 +494,172 @@ export class AutenticacionApplicationService implements AutenticacionService {
       emailVerificado: cuenta.emailVerificado,
       ultimoLogin: cuenta.ultimoLogin,
     };
+  }
+
+  /**
+   * Registra intento fallido de login y envía notificación si es bloqueada.
+   */
+  private async manejarLoginFallido(cuenta: CuentaUsuario): Promise<void> {
+    const maxIntentos = await this.configuracionPort.obtenerMaxIntentosLogin();
+    const minutosBloqueoInicial =
+      await this.configuracionPort.obtenerMinutosBloqueoInicial();
+
+    cuenta.registrarIntentoFallido(maxIntentos, minutosBloqueoInicial);
+
+    await this.cuentaRepository.guardar(cuenta);
+
+    if (cuenta.estado === EstadoCuenta.BLOQUEADA) {
+      await this.emailService.enviarEmailCuentaBloqueada(
+        cuenta.email,
+        '',
+        cuenta.bloqueadoHasta!,
+      );
+    }
+  }
+
+  /**
+   * Crea nueva sesión con access token y refresh token.
+   */
+  private async crearNuevaSesion(
+    cuenta: CuentaUsuario,
+    dispositivo?: string,
+  ): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    expiresIn: number;
+  }> {
+    const userId = cuenta.propietario.getId();
+
+    const { token: accessToken, expiresIn } =
+      await this.jwtService.generateAccessToken(
+        cuenta.id,
+        userId,
+        cuenta.tipoUsuario,
+      );
+
+    const refreshToken = this.tokenGenerator.generate();
+    const refreshTokenHash = this.tokenGenerator.hash(refreshToken);
+
+    const fechaExpiracion = await this.calcularFechaExpiracionRefreshToken(
+      cuenta.tipoUsuario,
+    );
+
+    const sesion = SesionUsuarioFactory.crear({
+      cuentaUsuarioId: cuenta.id,
+      refreshTokenHash,
+      dispositivo,
+      fechaExpiracion,
+    });
+
+    cuenta.agregarSesion(sesion);
+
+    await this.cuentaRepository.guardar(cuenta, {
+      sesiones: { nuevas: [sesion] },
+    });
+
+    return { accessToken, refreshToken, expiresIn };
+  }
+
+  /**
+   * Calcula fecha de expiración según tipo de usuario.
+   */
+  private async calcularFechaExpiracionRefreshToken(
+    tipoUsuario: TipoUsuario,
+  ): Promise<Date> {
+    const ttlHoras =
+      tipoUsuario === TipoUsuario.CLIENTE
+        ? (await this.configuracionPort.obtenerTTLRefreshTokenClienteDias()) *
+          24
+        : await this.configuracionPort.obtenerTTLRefreshTokenEmpleadoHoras();
+
+    return new Date(Date.now() + ttlHoras * 60 * 60 * 1000);
+  }
+
+  /**
+   * Busca sesión activa por refresh token hash.
+   */
+  private buscarSesionActiva(
+    cuenta: CuentaUsuario,
+    refreshTokenHash: string,
+  ): SesionUsuario | undefined {
+    return cuenta.sesiones.find(
+      (s) =>
+        s.refreshTokenHash === refreshTokenHash &&
+        s.estado === EstadoSesion.ACTIVA,
+    );
+  }
+
+  /**
+   * Obtiene todas las sesiones activas de una cuenta.
+   */
+  private obtenerSesionesActivasDeCuenta(
+    cuenta: CuentaUsuario,
+  ): SesionUsuario[] {
+    return Array.from(cuenta.sesiones).filter(
+      (s) => s.estado === EstadoSesion.ACTIVA,
+    );
+  }
+
+  /**
+   * Revoca todas las sesiones activas con un motivo.
+   */
+  private revocarSesionesActivas(
+    sesiones: SesionUsuario[],
+    motivo: string,
+  ): void {
+    sesiones.forEach((s) => s.revocar({ motivo }));
+  }
+
+  /**
+   * Busca token de recuperación pendiente por hash y tipo.
+   */
+  private buscarTokenRecuperacionPendiente(
+    cuenta: CuentaUsuario,
+    tokenHash: string,
+    tipoToken: TipoTokenRecuperacion,
+  ): TokenRecuperacion | undefined {
+    return cuenta.tokensRecuperacion.find(
+      (t) =>
+        t.tokenHash === tokenHash &&
+        t.tipoToken === tipoToken &&
+        t.estado === EstadoToken.PENDIENTE,
+    );
+  }
+
+  /**
+   * Crea token de recuperación/verificación con fecha de expiración.
+   */
+  private async crearTokenRecuperacion(
+    cuentaUsuarioId: string,
+    tipoToken: TipoTokenRecuperacion,
+  ): Promise<{ token: string; tokenRecuperacion: TokenRecuperacion }> {
+    const token = this.tokenGenerator.generate();
+    const tokenHash = this.tokenGenerator.hash(token);
+
+    const fechaExpiracion =
+      tipoToken === TipoTokenRecuperacion.VERIFICACION_EMAIL
+        ? await this.calcularFechaExpiracionTokenVerificacion()
+        : await this.calcularFechaExpiracionTokenRecuperacion();
+
+    const tokenRecuperacion = TokenRecuperacionFactory.crear({
+      cuentaUsuarioId,
+      tipoToken,
+      tokenHash,
+      fechaExpiracion,
+    });
+
+    return { token, tokenRecuperacion };
+  }
+
+  private async calcularFechaExpiracionTokenVerificacion(): Promise<Date> {
+    const horasExpiracion =
+      await this.configuracionPort.obtenerHorasExpiracionTokenVerificacion();
+    return new Date(Date.now() + horasExpiracion * 60 * 60 * 1000);
+  }
+
+  private async calcularFechaExpiracionTokenRecuperacion(): Promise<Date> {
+    const minutosExpiracion =
+      await this.configuracionPort.obtenerMinutosExpiracionTokenRecuperacion();
+    return new Date(Date.now() + minutosExpiracion * 60 * 1000);
   }
 }

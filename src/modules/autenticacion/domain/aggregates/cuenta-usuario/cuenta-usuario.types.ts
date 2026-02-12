@@ -22,6 +22,7 @@ export interface CuentaUsuarioProps {
   estado: EstadoCuenta;
   emailVerificado: boolean;
   intentosFallidos: number;
+  numeroBloqueos: number;
   bloqueadoHasta: Date | null;
   ultimoLogin: Date | null;
   ultimoCambioPassword: Date | null;
@@ -38,6 +39,7 @@ export interface CuentaUsuarioData {
   readonly estado: EstadoCuenta;
   readonly emailVerificado: boolean;
   readonly intentosFallidos: number;
+  readonly numeroBloqueos: number;
   readonly bloqueadoHasta: Date | null;
   readonly ultimoLogin: Date | null;
   readonly ultimoCambioPassword: Date | null;
@@ -47,13 +49,8 @@ export interface CuentaUsuarioData {
 
 export interface ResultadoAutenticacion {
   exito: boolean;
-  motivoFallo?: string;
+  error?: Error;
   requiereCambioPassword?: boolean;
-}
-
-export interface OpcionesBloqueo {
-  numeroBloqueo: number;
-  minutosBloqueoInicial: number;
 }
 
 /**

@@ -9,6 +9,7 @@ import type {
   CambiarPasswordData,
   CrearCuentaEmpleadoData,
   SesionInfo,
+  InformacionCuenta,
 } from './autenticacion.types';
 
 /**
@@ -112,12 +113,5 @@ export interface AutenticacionService {
 
   revocarSesion(sesionId: string, accountId: string): Promise<void>;
 
-  obtenerInformacionCuenta(accountId: string): Promise<{
-    accountId: string;
-    email: string;
-    tipoUsuario: string;
-    userId: string;
-    emailVerificado: boolean;
-    ultimoLogin: Date | null;
-  }>;
+  obtenerInformacionCuenta(accountId: string): Promise<InformacionCuenta>;
 }

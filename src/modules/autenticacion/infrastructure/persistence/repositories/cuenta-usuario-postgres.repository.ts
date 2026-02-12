@@ -200,6 +200,30 @@ export class CuentaUsuarioPostgresRepository implements CuentaUsuarioRepository 
     return data ? this.reconstituirCuenta(data) : null;
   }
 
+  async buscarPorRefreshToken(
+    refreshTokenHash: string,
+  ): Promise<CuentaUsuario | null> {
+    const sesion = await this.prismaService.sesionUsuario.findUnique({
+      where: { refreshTokenHash },
+      include: { cuentaUsuario: true },
+    });
+
+    return sesion?.cuentaUsuario
+      ? this.reconstituirCuenta(sesion.cuentaUsuario)
+      : null;
+  }
+
+  async buscarPorTokenHash(tokenHash: string): Promise<CuentaUsuario | null> {
+    const token = await this.prismaService.tokenRecuperacion.findUnique({
+      where: { tokenHash },
+      include: { cuentaUsuario: true },
+    });
+
+    return token?.cuentaUsuario
+      ? this.reconstituirCuenta(token.cuentaUsuario)
+      : null;
+  }
+
   async existePorEmail(email: string): Promise<boolean> {
     const cuenta = await this.prismaService.cuentaUsuario.findUnique({
       where: { email },

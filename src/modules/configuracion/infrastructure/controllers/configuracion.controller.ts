@@ -27,7 +27,7 @@ import type {
   ActualizarParametroOperativoRequestDto,
   CrearPoliticaRequestDto,
   PublicarPoliticaRequestDto,
-} from '../../application/dto/configuracion-request.dto';
+} from '../../application/dto';
 import {
   ParametroOperativoResponseDto,
   PoliticaResponseDto,

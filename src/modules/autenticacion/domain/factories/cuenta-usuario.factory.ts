@@ -30,6 +30,7 @@ export class CuentaUsuarioFactory {
         this.determinarEstadoInicial(props.tipoUsuario, props.emailVerificado),
       emailVerificado: props.emailVerificado ?? false,
       intentosFallidos: 0,
+      numeroBloqueos: 0,
       bloqueadoHasta: null,
       ultimoLogin: null,
       ultimoCambioPassword: null,

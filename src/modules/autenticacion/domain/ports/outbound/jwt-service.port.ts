@@ -9,9 +9,6 @@ export interface JwtPayload {
   exp: number;
 }
 
-/**
- * Puerto para generación y verificación de JWT (RS256).
- */
 export interface JwtService {
   /**
    * Genera access token JWT firmado con clave privada.

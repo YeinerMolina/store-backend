@@ -9,7 +9,7 @@ export class CuentaUsuarioMapper {
       tipoUsuario: cuenta.tipoUsuario,
       userId: cuenta.propietario.getId(),
       emailVerificado: cuenta.emailVerificado,
-      ultimoLogin: cuenta.ultimoLogin ? cuenta.ultimoLogin.toISOString() : null,
+      ultimoLogin: cuenta.ultimoLogin?.toISOString() ?? null,
     };
   }
 }

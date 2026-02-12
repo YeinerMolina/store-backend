@@ -29,6 +29,7 @@
 | `estado`                 | enum         | not null, default: PENDIENTE_VERIFICACION | ACTIVA, INACTIVA, BLOQUEADA, PENDIENTE_VERIFICACION |
 | `email_verificado`       | boolean      | not null, default: false                  | Si el email fue verificado                          |
 | `intentos_fallidos`      | int          | not null, default: 0                      | Contador de intentos fallidos consecutivos          |
+| `numero_bloqueos`        | int          | not null, default: 0                      | Contador histórico de veces que fue bloqueada       |
 | `bloqueado_hasta`        | timestamp    | nullable                                  | Si está bloqueada temporalmente                     |
 | `ultimo_login`           | timestamp    | nullable                                  | Fecha del último login exitoso                      |
 | `ultimo_cambio_password` | timestamp    | nullable                                  | Fecha del último cambio de contraseña               |

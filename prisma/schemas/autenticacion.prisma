@@ -106,6 +106,7 @@ enum ResultadoAuth {
  * - estado: Estado actual de la cuenta
  * - email_verificado: Si el email fue verificado
  * - intentos_fallidos: Contador de intentos fallidos consecutivos
+ * - numero_bloqueos: Contador histórico de veces que fue bloqueada
  * - bloqueado_hasta: Si está bloqueada temporalmente
  * - ultimo_login: Fecha del último login exitoso
  * - ultimo_cambio_password: Fecha del último cambio de contraseña
@@ -135,6 +136,7 @@ model CuentaUsuario {
   estado                EstadoCuenta      @default(PENDIENTE_VERIFICACION) @map("estado")
   emailVerificado       Boolean           @default(false) @map("email_verificado")
   intentosFallidos      Int               @default(0) @map("intentos_fallidos")
+  numeroBloqueos        Int               @default(0) @map("numero_bloqueos")
   bloqueadoHasta        DateTime?         @map("bloqueado_hasta")
   ultimoLogin           DateTime?         @map("ultimo_login")
   ultimoCambioPassword  DateTime?         @map("ultimo_cambio_password")

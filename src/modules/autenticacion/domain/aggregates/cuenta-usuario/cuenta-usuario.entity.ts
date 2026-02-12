@@ -6,12 +6,13 @@ import type {
 } from './cuenta-usuario.types';
 import { SesionUsuario } from '../sesion-usuario/sesion-usuario.entity';
 import { TokenRecuperacion } from '../token-recuperacion/token-recuperacion.entity';
+import { PropietarioCuenta } from '../../value-objects';
 
 /**
  * Aggregate root para cuentas de usuario (clientes y empleados).
  *
  * Invariantes:
- * - CLIENTE requiere clienteId, EMPLEADO requiere empleadoId (nunca ambos)
+ * - Una cuenta pertenece a UN SOLO propietario (Cliente o Empleado)
  * - Estado BLOQUEADA requiere bloqueadoHasta definido
  * - Password hash nunca se expone fuera del aggregate (encapsulación de secretos)
  */
@@ -19,9 +20,7 @@ export class CuentaUsuario {
   readonly #id: string;
   readonly #email: string;
   #passwordHash: string;
-  readonly #tipoUsuario: TipoUsuario;
-  readonly #clienteId: string | null;
-  readonly #empleadoId: string | null;
+  readonly #propietario: PropietarioCuenta;
   #estado: EstadoCuenta;
   #emailVerificado: boolean;
   #intentosFallidos: number;
@@ -43,15 +42,19 @@ export class CuentaUsuario {
   }
 
   get tipoUsuario(): TipoUsuario {
-    return this.#tipoUsuario;
+    return this.#propietario.getTipo();
   }
 
   get clienteId(): string | null {
-    return this.#clienteId;
+    return this.#propietario.getClienteId();
   }
 
   get empleadoId(): string | null {
-    return this.#empleadoId;
+    return this.#propietario.getEmpleadoId();
+  }
+
+  get propietario(): PropietarioCuenta {
+    return this.#propietario;
   }
 
   get estado(): EstadoCuenta {
@@ -102,9 +105,17 @@ export class CuentaUsuario {
     this.#id = props.id;
     this.#email = props.email;
     this.#passwordHash = props.passwordHash;
-    this.#tipoUsuario = props.tipoUsuario;
-    this.#clienteId = props.clienteId;
-    this.#empleadoId = props.empleadoId;
+
+    const propietarioId = props.clienteId || props.empleadoId;
+    if (!propietarioId) {
+      throw new Error('Cuenta debe tener clienteId o empleadoId');
+    }
+
+    this.#propietario = PropietarioCuenta.desde(
+      props.tipoUsuario,
+      propietarioId,
+    );
+
     this.#estado = props.estado;
     this.#emailVerificado = props.emailVerificado;
     this.#intentosFallidos = props.intentosFallidos;
@@ -122,20 +133,6 @@ export class CuentaUsuario {
   }
 
   private validarInvariantes(): void {
-    if (this.#tipoUsuario === TipoUsuario.CLIENTE && !this.#clienteId) {
-      throw new Error('Cuenta de tipo CLIENTE debe tener clienteId');
-    }
-
-    if (this.#tipoUsuario === TipoUsuario.EMPLEADO && !this.#empleadoId) {
-      throw new Error('Cuenta de tipo EMPLEADO debe tener empleadoId');
-    }
-
-    if (this.#clienteId && this.#empleadoId) {
-      throw new Error(
-        'Una cuenta no puede tener clienteId y empleadoId simultáneamente',
-      );
-    }
-
     if (this.#estado === EstadoCuenta.BLOQUEADA && !this.#bloqueadoHasta) {
       throw new Error('Cuenta bloqueada debe tener fecha de bloqueo');
     }
@@ -309,7 +306,7 @@ export class CuentaUsuario {
   }
 
   requiereCambioPassword(diasExpiracion = 90): boolean {
-    if (this.#tipoUsuario === TipoUsuario.CLIENTE) {
+    if (this.#propietario.esCliente()) {
       return false;
     }
 

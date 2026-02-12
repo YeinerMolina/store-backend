@@ -28,5 +28,11 @@ export interface CuentaUsuarioRepository {
 
   buscarPorEmpleadoId(empleadoId: string): Promise<CuentaUsuario | null>;
 
+  buscarPorRefreshToken(
+    refreshTokenHash: string,
+  ): Promise<CuentaUsuario | null>;
+
+  buscarPorTokenHash(tokenHash: string): Promise<CuentaUsuario | null>;
+
   existePorEmail(email: string): Promise<boolean>;
 }

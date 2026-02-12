@@ -40,6 +40,30 @@ export class CuentaUsuarioFactory {
     return CuentaUsuario.desde(cuentaProps);
   }
 
+  static crearCuentaCliente(props: {
+    email: string;
+    passwordHash: string;
+    clienteId: string;
+  }): CuentaUsuario {
+    return this.crear({
+      ...props,
+      tipoUsuario: TipoUsuario.CLIENTE,
+      emailVerificado: false,
+    });
+  }
+
+  static crearCuentaEmpleado(props: {
+    email: string;
+    passwordHash: string;
+    empleadoId: string;
+  }): CuentaUsuario {
+    return this.crear({
+      ...props,
+      tipoUsuario: TipoUsuario.EMPLEADO,
+      emailVerificado: true,
+    });
+  }
+
   /**
    * Determina el estado inicial según tipo de usuario.
    *

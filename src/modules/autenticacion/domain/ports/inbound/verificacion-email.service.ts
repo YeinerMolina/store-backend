@@ -1,4 +1,4 @@
-import type { VerificarEmailData } from './autenticacion.types';
+import { VerificarEmailData } from '../../types';
 
 /**
  * Puerto inbound para verificación de emails.

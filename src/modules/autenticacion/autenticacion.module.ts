@@ -7,6 +7,7 @@ import {
   GESTION_SESIONES_SERVICE_TOKEN,
   ADMIN_CUENTA_SERVICE_TOKEN,
   CUENTA_USUARIO_REPOSITORY_TOKEN,
+  LOG_AUTENTICACION_REPOSITORY_TOKEN,
   PASSWORD_HASHER_TOKEN,
   TOKEN_GENERATOR_TOKEN,
   JWT_SERVICE_TOKEN,
@@ -24,6 +25,7 @@ import { AdminCuentaApplicationService } from './application/services/admin-cuen
 import { CuentaValidationService } from './application/services/internal/cuenta-validation.service';
 import { TokenRecoveryService } from './application/services/internal/token-recovery.service';
 import { SesionManagementService } from './application/services/internal/sesion-management.service';
+import { LogAutenticacionPostgresRepository } from './infrastructure/persistence/repositories/log-autenticacion-postgres.repository';
 
 @Module({
   providers: [
@@ -50,6 +52,10 @@ import { SesionManagementService } from './application/services/internal/sesion-
     {
       provide: ADMIN_CUENTA_SERVICE_TOKEN,
       useClass: AdminCuentaApplicationService,
+    },
+    {
+      provide: LOG_AUTENTICACION_REPOSITORY_TOKEN,
+      useClass: LogAutenticacionPostgresRepository,
     },
     CuentaValidationService,
     TokenRecoveryService,

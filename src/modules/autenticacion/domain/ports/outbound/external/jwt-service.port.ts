@@ -1,4 +1,4 @@
-import type { TipoUsuario } from '../../aggregates/types';
+import { TipoUsuario } from '../../../aggregates';
 
 export interface JwtPayload {
   type: 'access';

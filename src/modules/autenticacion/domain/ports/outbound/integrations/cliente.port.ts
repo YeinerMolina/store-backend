@@ -1,7 +1,7 @@
 import type {
-  CrearClienteConCuentaData,
   ClienteBasicInfo,
-} from './cliente.types';
+  CrearClienteConCuentaData,
+} from '../../../types';
 
 export interface ClientePort {
   /**

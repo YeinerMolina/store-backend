@@ -1,6 +1,7 @@
 import { TipoUsuario, EstadoCuenta } from '../types';
 import type { SesionUsuario } from '../sesion-usuario/sesion-usuario.entity';
 import type { TokenRecuperacion } from '../token-recuperacion/token-recuperacion.entity';
+import type { TransactionContext } from '@shared/database';
 
 export interface CrearCuentaUsuarioProps {
   email: string;
@@ -56,6 +57,8 @@ export interface ResultadoAutenticacion {
 /**
  * Opciones declarativas para persistir entidades relacionadas con CuentaUsuario.
  * Usado por el repository para operaciones atómicas sobre el agregado completo.
+ * transactionContext permite reutilizar una transacción existente para coordinación
+ * con otros agregados (ej: LogAutenticacion).
  */
 export interface GuardarCuentaUsuarioOptions {
   sesiones?: {
@@ -67,4 +70,5 @@ export interface GuardarCuentaUsuarioOptions {
     nuevos?: TokenRecuperacion[];
     actualizados?: TokenRecuperacion[];
   };
+  transactionContext?: TransactionContext;
 }

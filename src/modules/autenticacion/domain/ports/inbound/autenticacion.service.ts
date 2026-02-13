@@ -1,8 +1,4 @@
-import type {
-  LoginData,
-  LoginResult,
-  RefreshTokenData,
-} from './autenticacion.types';
+import type { LoginData, LoginResult, RefreshTokenData } from '../../types';
 
 /**
  * Puerto inbound para autenticación (login/logout/refresh).

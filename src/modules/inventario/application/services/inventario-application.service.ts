@@ -3,10 +3,10 @@ import {
   EntidadNoEncontradaError,
   EntidadDuplicadaError,
 } from '../../domain/exceptions';
-import type { InventarioRepository } from '../../domain/ports/outbound/inventario.repository';
-import type { EventBusPort } from '../../domain/ports/outbound/event-bus.port';
+import type { InventarioRepository } from '../../domain/ports/outbound/repositories';
+import type { EventBusPort } from '../../domain/ports/outbound/integrations';
 import type { TransactionManager } from '@shared/database';
-import type { ConfiguracionPort } from '../../domain/ports/outbound/configuracion.port';
+import type { ConfiguracionPort } from '../../domain/ports/outbound/integrations';
 import {
   TipoOperacionEnum,
   ParametroConfiguracionInventario,

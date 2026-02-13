@@ -1,4 +1,4 @@
-import type { TipoUsuario } from '../../aggregates/types';
+import { TipoUsuario } from '../aggregates';
 
 export interface RegistrarClienteData {
   email: string;
@@ -68,4 +68,43 @@ export interface InformacionCuenta {
   userId: string;
   emailVerificado: boolean;
   ultimoLogin: Date | null;
+}
+
+/**
+ * Resultado de crear una nueva sesión de usuario.
+ * Retorna tokens de acceso y refresco sin incluir la entidad sesión.
+ */
+export interface CrearSesionResult {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+}
+
+/**
+ * Resultado de generar una nueva sesión completa.
+ * Incluye tokens, tiempo de expiración y la entidad sesión creada.
+ * Usado internamente para operaciones que requieren la sesión (login, refreshToken).
+ */
+export interface GenerarSesionResult {
+  accessToken: string;
+  refreshToken: string;
+  sesion: import('../aggregates/sesion-usuario/sesion-usuario.entity').SesionUsuario;
+  expiresIn: number;
+}
+
+/**
+ * Resultado de crear un token de recuperación.
+ * Retorna el token en texto plano (para enviar al usuario) y la entidad TokenRecuperacion.
+ */
+export interface CrearTokenRecuperacionResult {
+  token: string;
+  tokenRecuperacion: import('../aggregates/token-recuperacion/token-recuperacion.entity').TokenRecuperacion;
+}
+
+/**
+ * Resultado de operaciones de registro de cuenta.
+ * Retorna el ID de la cuenta creada.
+ */
+export interface CrearCuentaResult {
+  accountId: string;
 }

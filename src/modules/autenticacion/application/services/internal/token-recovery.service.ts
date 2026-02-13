@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { CuentaUsuarioRepository } from '../../../domain/ports/outbound/cuenta-usuario.repository';
-import type { TokenGenerator } from '../../../domain/ports/outbound/token-generator.port';
-import type { ConfiguracionPort } from '../../../domain/ports/outbound/configuracion.port';
+import type { CuentaUsuarioRepository } from '../../../domain/ports/outbound/repositories';
+import type { TokenGenerator } from '../../../domain/ports/outbound/external';
+import type { ConfiguracionPort } from '../../../domain/ports/outbound/integrations';
 import {
   CUENTA_USUARIO_REPOSITORY_TOKEN,
   TOKEN_GENERATOR_TOKEN,
@@ -19,6 +19,7 @@ import {
   TokenExpiradoError,
   TokenYaUsadoError,
 } from '../../../domain/exceptions';
+import type { CrearTokenRecuperacionResult } from '../../../domain/types';
 
 /**
  * Servicio interno para manejo de tokens de recuperación y verificación.
@@ -71,7 +72,7 @@ export class TokenRecoveryService {
   async crearTokenRecuperacion(
     cuentaUsuarioId: string,
     tipoToken: TipoTokenRecuperacion,
-  ): Promise<{ token: string; tokenRecuperacion: TokenRecuperacion }> {
+  ): Promise<CrearTokenRecuperacionResult> {
     const token = this.tokenGenerator.generate();
     const tokenHash = this.tokenGenerator.hash(token);
 

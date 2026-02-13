@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { EventBusPort } from '../../domain/ports/outbound/event-bus.port';
+import type { EventBusPort } from '../../domain/ports/outbound/integrations';
 
 @Injectable()
 export class EventBusConsoleAdapter implements EventBusPort {

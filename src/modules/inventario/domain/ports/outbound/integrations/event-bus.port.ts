@@ -1,4 +1,4 @@
-import { EVENT_BUS_PORT_TOKEN } from '../tokens';
+import { EVENT_BUS_PORT_TOKEN } from '../../tokens';
 
 export { EVENT_BUS_PORT_TOKEN };
 

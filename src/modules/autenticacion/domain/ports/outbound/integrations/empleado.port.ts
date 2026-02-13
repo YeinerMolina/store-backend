@@ -1,4 +1,4 @@
-import type { EmpleadoBasicInfo } from './empleado.types';
+import { EmpleadoBasicInfo } from '../../../types';
 
 export interface EmpleadoPort {
   buscarPorId(empleadoId: string): Promise<EmpleadoBasicInfo | null>;

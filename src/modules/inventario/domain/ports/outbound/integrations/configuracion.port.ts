@@ -1,4 +1,4 @@
-import type { ParametroConfiguracionInventario } from '../../aggregates/inventario/types';
+import type { ParametroConfiguracionInventario } from '../../../aggregates/inventario/types';
 
 /**
  * Puerto para obtener parámetros operativos del módulo CONFIGURACION.

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { CuentaUsuarioRepository } from '../../../domain/ports/outbound/cuenta-usuario.repository';
-import type { PasswordHasher } from '../../../domain/ports/outbound/password-hasher.port';
-import type { EmpleadoPort } from '../../../domain/ports/outbound/empleado.port';
+import type { CuentaUsuarioRepository } from '../../../domain/ports/outbound/repositories';
+import type { PasswordHasher } from '../../../domain/ports/outbound/external';
+import type { EmpleadoPort } from '../../../domain/ports/outbound/integrations';
 import {
   CUENTA_USUARIO_REPOSITORY_TOKEN,
   PASSWORD_HASHER_TOKEN,

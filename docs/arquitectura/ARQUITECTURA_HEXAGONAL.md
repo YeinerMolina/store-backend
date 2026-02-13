@@ -56,12 +56,33 @@ Cada módulo sigue esta estructura exacta:
 │   │   ├── inbound/               ← Casos de uso (QUÉ expone el módulo)
 │   │   │   └── {servicio}.service.ts
 │   │   │
-│   │   └── outbound/              ← Dependencias (QUÉ necesita el módulo)
-│   │       ├── {repositorio}.repository.ts
-│   │       └── {modulo-externo}.port.ts
+│   │   ├── outbound/              ← Dependencias (QUÉ necesita el módulo)
+│   │   │   ├── repositories/     ← 📁 Persistencia de agregados
+│   │   │   │   ├── {repo}.repository.ts
+│   │   │   │   └── index.ts
+│   │   │   │
+│   │   │   ├── external/         ← 📁 Servicios técnicos (email, JWT, etc)
+│   │   │   │   ├── {servicio}.port.ts
+│   │   │   │   └── index.ts
+│   │   │   │
+│   │   │   └── integrations/     ← 📁 Otros módulos del sistema
+│   │   │       ├── {modulo}.port.ts
+│   │   │       └── index.ts
+│   │   │
+│   │   └── tokens.ts              ← DI tokens (Symbol)
 │   │
-│   └── events/                     ← Eventos de dominio
-│       └── {evento}.event.ts
+│   ├── types/                      ← Contratos de datos del dominio
+│   │   ├── {dominio}.types.ts    ← Props, Data, Results
+│   │   └── index.ts
+│   │
+│   ├── events/                     ← Eventos de dominio
+│   │   └── {evento}.event.ts
+│   │
+│   ├── factories/                  ← Creación de agregados con UUID v7
+│   │   └── {agregado}.factory.ts
+│   │
+│   └── exceptions/                 ← Errores de dominio
+│       └── {error}.error.ts
 │
 ├── application/                     ← CAPA 2: ORQUESTACIÓN
 │   ├── services/                   ← Implementan puertos inbound
@@ -89,6 +110,40 @@ Cada módulo sigue esta estructura exacta:
 ├── {modulo}.module.ts              ← Módulo NestJS (DI)
 └── README.md                        ← Documentación del módulo
 ```
+
+## 🗂️ Tabla de Decisión: ¿Dónde Va Este Archivo?
+
+| Si el archivo es...                        | Va en...                                           | Ejemplo                                 |
+| ------------------------------------------ | -------------------------------------------------- | --------------------------------------- |
+| **Entidad de dominio / Agregado**          | `domain/aggregates/{agregado}/`                    | `cuenta-usuario.entity.ts`              |
+| **Value Object inmutable**                 | `domain/value-objects/`                            | `email.vo.ts`, `password.vo.ts`         |
+| **Puerto inbound (caso de uso)**           | `domain/ports/inbound/`                            | `autenticacion.service.ts`              |
+| **Repository (persistencia)**              | `domain/ports/outbound/repositories/`              | `cuenta-usuario.repository.ts`          |
+| **Servicio técnico externo (email, JWT)**  | `domain/ports/outbound/external/`                  | `email-service.port.ts`                 |
+| **Integración con otro módulo**            | `domain/ports/outbound/integrations/`              | `cliente.port.ts`                       |
+| **Contrato de datos compartido (puertos)** | `domain/types/`                                    | `autenticacion.types.ts`                |
+| **Contrato interno del agregado**          | `domain/aggregates/{agregado}/{agregado}.types.ts` | `inventario.types.ts`                   |
+| **Token de DI**                            | `domain/ports/tokens.ts`                           | `CUENTA_REPOSITORY_TOKEN`               |
+| **Evento de dominio**                      | `domain/events/`                                   | `cuenta-creada.event.ts`                |
+| **Factory para crear agregado**            | `domain/factories/`                                | `cuenta-usuario.factory.ts`             |
+| **Excepción de dominio**                   | `domain/exceptions/`                               | `credenciales-invalidas.error.ts`       |
+| **Service que implementa puerto inbound**  | `application/services/`                            | `autenticacion-application.service.ts`  |
+| **DTO de entrada/salida de API**           | `application/dto/`                                 | `login-request.dto.ts`                  |
+| **Schema de validación (Zod)**             | `application/dto/`                                 | `login-request.schema.ts`               |
+| **Mapper Domain ↔ DTO**                    | `application/mappers/`                             | `cuenta-usuario-response.mapper.ts`     |
+| **Repository implementación (Prisma)**     | `infrastructure/persistence/repositories/`         | `cuenta-usuario-postgres.repository.ts` |
+| **Mapper Domain ↔ Prisma**                 | `infrastructure/persistence/mappers/`              | `prisma-cuenta-usuario.mapper.ts`       |
+| **Adaptador a otro módulo**                | `infrastructure/adapters/`                         | `cliente-http.adapter.ts`               |
+| **Controller HTTP (NestJS)**               | `infrastructure/controllers/`                      | `autenticacion.controller.ts`           |
+| **Job background / Worker**                | `infrastructure/jobs/`                             | `limpiar-sesiones.job.ts`               |
+
+### Reglas Rápidas
+
+1. **¿Es lógica de negocio pura?** → `domain/`
+2. **¿Orquesta casos de uso?** → `application/`
+3. **¿Implementa infraestructura técnica?** → `infrastructure/`
+4. **¿Es un contrato (interfaz)?** → `domain/ports/` (subdividido por tipo)
+5. **¿Es un contrato de datos?** → `domain/types/` (compartido) o `domain/aggregates/{agregado}/*.types.ts` (interno)
 
 ## 🔄 Flujo de Dependencias
 
@@ -207,6 +262,110 @@ class VentaPostgresRepository implements VentaRepository {
    ┌───────────────────────┐  ┌─────────────────────┐
 OUTBOUND │VentaPostgresRepository│  │ InventarioHttpAdapter│ (Adaptadores Secundarios)
    └───────────────────────┘  └─────────────────────┘
+```
+
+### Organización de Puertos Outbound
+
+Los puertos outbound se organizan en **tres subcategorías** según su propósito:
+
+#### 1. **`repositories/`** - Persistencia de Agregados
+
+Interfaces para persistir y recuperar agregados de la base de datos.
+
+```typescript
+// domain/ports/outbound/repositories/cuenta-usuario.repository.ts
+export interface CuentaUsuarioRepository {
+  guardar(cuenta: CuentaUsuario): Promise<void>;
+  buscarPorId(id: string): Promise<CuentaUsuario | null>;
+  buscarPorEmail(email: string): Promise<CuentaUsuario | null>;
+}
+
+// Implementación en infrastructure/persistence/
+export class CuentaUsuarioPostgresRepository implements CuentaUsuarioRepository {
+  // Usa Prisma para persistir
+}
+```
+
+**Cuándo usar**: Para operaciones de persistencia (guardar, buscar, actualizar agregados).
+
+#### 2. **`external/`** - Servicios Técnicos Externos
+
+Interfaces para servicios técnicos de infraestructura (email, JWT, hashing, etc).
+
+```typescript
+// domain/ports/outbound/external/email-service.port.ts
+export interface EmailService {
+  enviarVerificacion(email: string, token: string): Promise<void>;
+  enviarRecuperacion(email: string, token: string): Promise<void>;
+}
+
+// domain/ports/outbound/external/password-hasher.port.ts
+export interface PasswordHasher {
+  hash(password: string): Promise<string>;
+  verify(password: string, hash: string): Promise<boolean>;
+}
+
+// Implementaciones en infrastructure/adapters/
+export class BcryptPasswordHasher implements PasswordHasher {}
+export class NodemailerEmailService implements EmailService {}
+```
+
+**Cuándo usar**: Para servicios técnicos que no forman parte del dominio de negocio (autenticación, notificaciones, criptografía, etc).
+
+#### 3. **`integrations/`** - Comunicación con Otros Módulos
+
+Interfaces para interactuar con otros bounded contexts del sistema.
+
+```typescript
+// domain/ports/outbound/integrations/cliente.port.ts
+export interface ClientePort {
+  buscarPorId(id: string): Promise<ClienteData | null>;
+  validarExistencia(id: string): Promise<boolean>;
+}
+
+// domain/ports/outbound/integrations/configuracion.port.ts
+export interface ConfiguracionPort {
+  obtenerDuracionSesion(): Promise<number>;
+  obtenerMaxReintentos(): Promise<number>;
+}
+
+// Implementaciones en infrastructure/adapters/
+export class ClienteHttpAdapter implements ClientePort {}
+export class ConfiguracionHttpAdapter implements ConfiguracionPort {}
+```
+
+**Cuándo usar**: Para comunicarse con otros módulos del sistema (otros bounded contexts).
+
+#### Barrel Exports (index.ts)
+
+Cada subcarpeta tiene un `index.ts` para centralizar exports:
+
+```typescript
+// domain/ports/outbound/repositories/index.ts
+export * from './cuenta-usuario.repository';
+export * from './log-autenticacion.repository';
+
+// domain/ports/outbound/external/index.ts
+export * from './email-service.port';
+export * from './password-hasher.port';
+export * from './jwt-service.port';
+
+// domain/ports/outbound/integrations/index.ts
+export * from './cliente.port';
+export * from './empleado.port';
+export * from './configuracion.port';
+```
+
+**Beneficios de imports limpios**:
+
+```typescript
+// ✅ Limpio (desde subcarpeta)
+import { CuentaUsuarioRepository } from '../../domain/ports/outbound/repositories';
+import { EmailService } from '../../domain/ports/outbound/external';
+import { ClientePort } from '../../domain/ports/outbound/integrations';
+
+// ❌ Verboso (ruta completa a archivo)
+import { CuentaUsuarioRepository } from '../../domain/ports/outbound/repositories/cuenta-usuario.repository';
 ```
 
 ## 📦 Agregados DDD y Repositorios
@@ -844,12 +1003,15 @@ export const INVENTARIO_PORT_TOKEN = Symbol('INVENTARIO_PORT');
 
 ### Types del Dominio
 
-**Ubicación**: `domain/aggregates/{entidad}/{entidad}.types.ts`
+**Ubicación**:
 
-Interfaces que definen contratos de **métodos del dominio**:
+- **Internos del agregado**: `domain/aggregates/{entidad}/{entidad}.types.ts`
+- **Compartidos/Puertos**: `domain/types/{dominio}.types.ts`
+
+Interfaces que definen contratos de **métodos del dominio y puertos**:
 
 ```typescript
-// domain/aggregates/inventario/inventario.types.ts
+// domain/aggregates/inventario/inventario.types.ts (internos del agregado)
 export interface ReservarInventarioProps {
   readonly cantidad: number;
   readonly tipoOperacion: TipoOperacionEnum; // ← Enum del dominio
@@ -862,10 +1024,21 @@ export interface InventarioData {
   // ... datos para reconstruir desde BD
 }
 
-// Usado en:
-class Inventario {
-  reservar(props: ReservarInventarioProps): Reserva {}
-  static desde(data: InventarioData): Inventario {}
+// domain/types/autenticacion.types.ts (compartidos entre puertos)
+export interface LoginData {
+  readonly email: string;
+  readonly password: string;
+}
+
+export interface LoginResult {
+  readonly accessToken: string;
+  readonly refreshToken: string;
+  readonly expiresIn: number;
+}
+
+// Usado en puertos inbound y outbound
+interface AutenticacionService {
+  login(data: LoginData): Promise<LoginResult>;
 }
 ```
 
@@ -875,6 +1048,7 @@ class Inventario {
 - Solo se usan DENTRO del dominio
 - Props para factory methods y comandos
 - Data para reconstrucción desde persistencia
+- **Types en `domain/types/`**: Contratos compartidos entre puertos (inbound y outbound)
 
 ### DTOs de Aplicación
 

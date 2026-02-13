@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { EventBusPort } from '@inventario/domain/ports/outbound/event-bus.port';
 import { RedisService } from '../redis/redis.service';
+import { EventBusPort } from '@inventario/domain/ports/outbound/integrations';
 
 /**
  * Redis Pub/Sub implementation of EventBusPort.

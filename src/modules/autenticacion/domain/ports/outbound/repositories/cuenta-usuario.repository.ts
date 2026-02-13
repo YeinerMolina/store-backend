@@ -1,5 +1,7 @@
-import type { CuentaUsuario } from '../../aggregates/cuenta-usuario/cuenta-usuario.entity';
-import type { GuardarCuentaUsuarioOptions } from '../../aggregates/cuenta-usuario/cuenta-usuario.types';
+import {
+  CuentaUsuario,
+  GuardarCuentaUsuarioOptions,
+} from '../../../aggregates';
 
 /**
  * Un agregado = un repository (regla DDD).

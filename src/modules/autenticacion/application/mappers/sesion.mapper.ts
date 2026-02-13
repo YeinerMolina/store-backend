@@ -1,6 +1,6 @@
 import type { SesionUsuario } from '../../domain/aggregates/sesion-usuario/sesion-usuario.entity';
 import type { SesionResponseDto } from '../dto/sesion-response.dto';
-import type { SesionInfo } from '../../domain/ports/inbound/autenticacion.types';
+import type { SesionInfo } from '../../domain/types';
 
 export class SesionMapper {
   static toResponseDto(sesion: SesionUsuario): SesionResponseDto {

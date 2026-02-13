@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { CuentaUsuarioRepository } from '../../../domain/ports/outbound/cuenta-usuario.repository';
-import type { TokenGenerator } from '../../../domain/ports/outbound/token-generator.port';
-import type { JwtService } from '../../../domain/ports/outbound/jwt-service.port';
-import type { ConfiguracionPort } from '../../../domain/ports/outbound/configuracion.port';
+import type { CuentaUsuarioRepository } from '../../../domain/ports/outbound/repositories';
+import type { TokenGenerator } from '../../../domain/ports/outbound/external';
+import type { JwtService } from '../../../domain/ports/outbound/external';
+import type { ConfiguracionPort } from '../../../domain/ports/outbound/integrations';
 import {
   CUENTA_USUARIO_REPOSITORY_TOKEN,
   TOKEN_GENERATOR_TOKEN,
@@ -14,6 +14,10 @@ import type { SesionUsuario } from '../../../domain/aggregates/sesion-usuario/se
 import { SesionUsuarioFactory } from '../../../domain/factories/sesion-usuario.factory';
 import { TipoUsuario, EstadoSesion } from '../../../domain/aggregates/types';
 import { SesionInvalidaError } from '../../../domain/exceptions';
+import type {
+  CrearSesionResult,
+  GenerarSesionResult,
+} from '../../../domain/types';
 
 /**
  * Servicio interno para manejo de sesiones de usuario.
@@ -34,11 +38,7 @@ export class SesionManagementService {
   async crearNuevaSesion(
     cuenta: CuentaUsuario,
     dispositivo?: string,
-  ): Promise<{
-    accessToken: string;
-    refreshToken: string;
-    expiresIn: number;
-  }> {
+  ): Promise<CrearSesionResult> {
     const { accessToken, refreshToken, sesion, expiresIn } =
       await this.generarNuevaSesion(cuenta, dispositivo);
 
@@ -60,12 +60,7 @@ export class SesionManagementService {
   async generarNuevaSesion(
     cuenta: CuentaUsuario,
     dispositivo?: string,
-  ): Promise<{
-    accessToken: string;
-    refreshToken: string;
-    sesion: SesionUsuario;
-    expiresIn: number;
-  }> {
+  ): Promise<GenerarSesionResult> {
     const userId = cuenta.propietario.getId();
 
     const { token: accessToken, expiresIn } =

@@ -19,7 +19,7 @@ export {
 export { parseParametroValor } from './helpers/parametro.helpers';
 
 export type { ConfiguracionService } from './ports/inbound/configuracion.service';
-export type { ConfiguracionRepository } from './ports/outbound/configuracion.repository';
+export type { ConfiguracionRepository } from './ports/outbound/repositories/configuracion.repository';
 
 export {
   ConfiguracionEventType,

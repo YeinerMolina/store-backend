@@ -3,7 +3,7 @@ import type {
   MovimientoInventario,
   Reserva,
 } from '@inventario/domain/aggregates/inventario';
-import type { TransactionContext } from '@inventario/domain/ports/outbound/inventario.repository';
+import { TransactionContext } from '@shared/database';
 
 /**
  * Result of a domain operation on a reservation.

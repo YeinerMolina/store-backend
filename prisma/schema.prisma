@@ -7,7 +7,7 @@
 //   1. Editar archivos en prisma/schemas/
 //   2. Ejecutar: npm run schema:merge
 //
-// Generado: 2026-02-12T11:11:12.229Z
+// Generado: 2026-02-13T13:36:14.266Z
 // Fuentes: base.prisma, autenticacion.prisma, configuracion.prisma, inventario.prisma
 // ============================================================================
 
@@ -312,7 +312,6 @@ model LogAutenticacion {
   tipoEvento         TipoEventoAuth  @map("tipo_evento")
   resultado          ResultadoAuth   @map("resultado")
   motivoFallo        String?         @map("motivo_fallo") @db.VarChar(100)
-  ipOrigen           String?         @map("ip_origen") @db.VarChar(45)
   userAgent          String?         @map("user_agent") @db.VarChar(500)
   metadata           Json?           @map("metadata")
   fechaEvento        DateTime        @default(now()) @map("fecha_evento")
@@ -322,7 +321,6 @@ model LogAutenticacion {
   @@index([emailIntento, fechaEvento], name: "idx_log_auth_email_fecha")
   @@index([cuentaUsuarioId, fechaEvento], name: "idx_log_auth_cuenta_fecha")
   @@index([tipoEvento, fechaEvento], name: "idx_log_auth_tipo_fecha")
-  @@index([ipOrigen], name: "idx_log_auth_ip")
   @@map("log_autenticacion")
 }
 

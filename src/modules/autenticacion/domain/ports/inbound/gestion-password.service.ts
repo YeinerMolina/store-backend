@@ -2,7 +2,7 @@ import type {
   SolicitarRecuperacionData,
   EjecutarRecuperacionData,
   CambiarPasswordData,
-} from './autenticacion.types';
+} from '../../types';
 
 /**
  * Puerto inbound para gestión de contraseñas.

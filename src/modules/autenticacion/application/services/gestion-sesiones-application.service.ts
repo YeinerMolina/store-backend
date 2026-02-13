@@ -1,20 +1,34 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import type { GestionSesionesService } from '../../domain/ports/inbound/gestion-sesiones.service';
-import type { SesionInfo } from '../../domain/ports/inbound/autenticacion.types';
-import type { CuentaUsuarioRepository } from '../../domain/ports/outbound/cuenta-usuario.repository';
-import { Inject } from '@nestjs/common';
-import { CUENTA_USUARIO_REPOSITORY_TOKEN } from '../../domain/ports/tokens';
-import { EstadoSesion } from '../../domain/aggregates/types';
+import type { SesionInfo } from '../../domain/types';
+import type { CuentaUsuarioRepository } from '../../domain/ports/outbound/repositories';
+import type { LogAutenticacionRepository } from '../../domain/ports/outbound/repositories';
+import type { TransactionManager } from '@shared/database/ports/transaction-manager.port';
+import {
+  CUENTA_USUARIO_REPOSITORY_TOKEN,
+  LOG_AUTENTICACION_REPOSITORY_TOKEN,
+  TRANSACTION_MANAGER_TOKEN,
+} from '../../domain/ports/tokens';
+import {
+  EstadoSesion,
+  TipoEventoAuth,
+  ResultadoAuth,
+} from '../../domain/aggregates/types';
 import { SesionInvalidaError } from '../../domain/exceptions';
 import { SesionMapper } from '../mappers/sesion.mapper';
 import { CuentaValidationService } from './internal/cuenta-validation.service';
 import { SesionManagementService } from './internal/sesion-management.service';
+import { LogAutenticacionFactory } from '../../domain/factories';
 
 @Injectable()
 export class GestionSesionesApplicationService implements GestionSesionesService {
   constructor(
     @Inject(CUENTA_USUARIO_REPOSITORY_TOKEN)
     private readonly cuentaRepository: CuentaUsuarioRepository,
+    @Inject(LOG_AUTENTICACION_REPOSITORY_TOKEN)
+    private readonly logRepository: LogAutenticacionRepository,
+    @Inject(TRANSACTION_MANAGER_TOKEN)
+    private readonly transactionManager: TransactionManager,
     private readonly cuentaValidation: CuentaValidationService,
     private readonly sesionManagement: SesionManagementService,
   ) {}
@@ -29,8 +43,22 @@ export class GestionSesionesApplicationService implements GestionSesionesService
       'Revocación masiva por usuario',
     );
 
-    await this.cuentaRepository.guardar(cuenta, {
-      sesiones: { actualizadas: sesionesActivas },
+    const log = LogAutenticacionFactory.crear({
+      emailIntento: cuenta.email,
+      cuentaUsuarioId: cuenta.id,
+      tipoEvento: TipoEventoAuth.REVOCACION_MASIVA,
+      resultado: ResultadoAuth.EXITOSO,
+      metadata: {
+        sesiones_revocadas: sesionesActivas.length,
+      },
+    });
+
+    await this.transactionManager.transaction(async (tx) => {
+      await this.cuentaRepository.guardar(cuenta, {
+        sesiones: { actualizadas: sesionesActivas },
+        transactionContext: tx,
+      });
+      await this.logRepository.guardar(log, tx);
     });
 
     return sesionesActivas.length;
@@ -58,8 +86,22 @@ export class GestionSesionesApplicationService implements GestionSesionesService
 
     sesion.revocar({ motivo: 'Revocación manual por usuario' });
 
-    await this.cuentaRepository.guardar(cuenta, {
-      sesiones: { actualizadas: [sesion] },
+    const log = LogAutenticacionFactory.crear({
+      emailIntento: cuenta.email,
+      cuentaUsuarioId: cuenta.id,
+      tipoEvento: TipoEventoAuth.REVOCACION_SESION,
+      resultado: ResultadoAuth.EXITOSO,
+      metadata: {
+        sesion_id: sesionId,
+      },
+    });
+
+    await this.transactionManager.transaction(async (tx) => {
+      await this.cuentaRepository.guardar(cuenta, {
+        sesiones: { actualizadas: [sesion] },
+        transactionContext: tx,
+      });
+      await this.logRepository.guardar(log, tx);
     });
   }
 }

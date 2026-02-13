@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { ConfiguracionPort } from '../../domain/ports/outbound/configuracion.port';
+import type { ConfiguracionPort } from '../../domain/ports/outbound/integrations';
 import { ParametroConfiguracionInventario } from '../../domain/aggregates/inventario/types';
 
 /**

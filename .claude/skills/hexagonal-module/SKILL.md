@@ -8,7 +8,7 @@ description: >
 license: Apache-2.0
 metadata:
   author: yeiner-molina
-  version: "1.0"
+  version: '1.0'
 ---
 
 ## When to Use
@@ -45,11 +45,19 @@ Every module follows this exact layout under `src/modules/{modulo}/`:
 │   │   ├── inbound/
 │   │   │   └── {servicio}.service.ts     # Use case INTERFACE
 │   │   ├── outbound/
-│   │   │   ├── {repo}.repository.ts      # Repository INTERFACE
-│   │   │   ├── {modulo-externo}.port.ts  # External module INTERFACE
-│   │   │   ├── event-bus.port.ts         # Event bus INTERFACE
-│   │   │   └── transaction-manager.port.ts
+│   │   │   ├── repositories/            # 📁 Persistence interfaces
+│   │   │   │   ├── {repo}.repository.ts
+│   │   │   │   └── index.ts             # Barrel export
+│   │   │   ├── external/                # 📁 Technical services (email, JWT)
+│   │   │   │   ├── {servicio}.port.ts
+│   │   │   │   └── index.ts
+│   │   │   └── integrations/            # 📁 Other system modules
+│   │   │       ├── {modulo}.port.ts
+│   │   │       └── index.ts
 │   │   └── tokens.ts                     # DI tokens (Symbols)
+│   ├── types/                            # Data contracts (shared across ports)
+│   │   ├── {dominio}.types.ts           # LoginData, LoginResult, etc.
+│   │   └── index.ts
 │   ├── events/
 │   │   └── {evento}.event.ts             # Domain events
 │   ├── exceptions/
@@ -112,48 +120,50 @@ Every module follows this exact layout under `src/modules/{modulo}/`:
 
 ## Decision: Where Does This File Go?
 
-| I need to create...                        | Layer              | Path                                              |
-|--------------------------------------------|--------------------|----------------------------------------------------|
-| Business rules, invariants, state machine  | domain             | `domain/aggregates/{agregado}/{agregado}.entity.ts` |
-| Shared enums for a bounded context         | domain             | `domain/aggregates/{agregado}/types.ts`             |
-| Props/Data interfaces for entity methods   | domain             | `domain/aggregates/{agregado}/{agregado}.types.ts`  |
-| Immutable value (Money, Cantidad, Version) | domain             | `domain/value-objects/{vo}.ts`                      |
-| Use case contract (WHAT the module does)   | domain             | `domain/ports/inbound/{servicio}.service.ts`        |
-| Repository contract                        | domain             | `domain/ports/outbound/{repo}.repository.ts`        |
-| External module contract                   | domain             | `domain/ports/outbound/{modulo}.port.ts`            |
-| DI injection tokens                        | domain             | `domain/ports/tokens.ts`                            |
-| Domain event                               | domain             | `domain/events/{evento}.event.ts`                   |
-| Domain exception                           | domain             | `domain/exceptions/{error}.error.ts`                |
-| Entity factory (UUID v7 generation)        | domain             | `domain/factories/{agregado}.factory.ts`            |
-| Use case implementation (orchestration)    | application        | `application/services/{svc}-application.service.ts` |
-| HTTP input contract                        | application        | `application/dto/{op}-request.dto.ts`               |
-| Zod validation schema                      | application        | `application/dto/{op}-request.schema.ts`            |
-| HTTP output contract                       | application        | `application/dto/{entidad}-response.dto.ts`         |
-| Domain <-> DTO mapper                      | application        | `application/mappers/{entidad}.mapper.ts`           |
-| HTTP controller                            | infrastructure     | `infrastructure/controllers/{ctrl}.controller.ts`   |
-| Prisma repository implementation           | infrastructure     | `infrastructure/persistence/repositories/{repo}-postgres.repository.ts` |
-| Domain <-> Prisma mapper                   | infrastructure     | `infrastructure/persistence/mappers/prisma-{entidad}.mapper.ts` |
-| Stub/adapter for external module           | infrastructure     | `infrastructure/adapters/{modulo}-stub.adapter.ts`  |
-| Background job                             | infrastructure     | `infrastructure/jobs/{modulo}-jobs.service.ts`      |
-| NestJS module with DI                      | infrastructure     | `infrastructure/{modulo}.module.ts`                 |
-| Swagger decorators                         | docs               | `docs/decorators/api-{modulo}.decorator.ts`         |
-| Swagger examples                           | docs               | `docs/examples/{modulo}.examples.ts`                |
+| I need to create...                         | Layer          | Path                                                                    |
+| ------------------------------------------- | -------------- | ----------------------------------------------------------------------- |
+| Business rules, invariants, state machine   | domain         | `domain/aggregates/{agregado}/{agregado}.entity.ts`                     |
+| Shared enums for a bounded context          | domain         | `domain/aggregates/{agregado}/types.ts`                                 |
+| Props/Data interfaces for entity methods    | domain         | `domain/aggregates/{agregado}/{agregado}.types.ts`                      |
+| **Data contracts shared across ports**      | domain         | `domain/types/{dominio}.types.ts`                                       |
+| Immutable value (Money, Cantidad, Version)  | domain         | `domain/value-objects/{vo}.ts`                                          |
+| Use case contract (WHAT the module does)    | domain         | `domain/ports/inbound/{servicio}.service.ts`                            |
+| **Repository contract (persistence)**       | domain         | `domain/ports/outbound/repositories/{repo}.repository.ts`               |
+| **Technical service (email, JWT, hashing)** | domain         | `domain/ports/outbound/external/{servicio}.port.ts`                     |
+| **Other module integration**                | domain         | `domain/ports/outbound/integrations/{modulo}.port.ts`                   |
+| DI injection tokens                         | domain         | `domain/ports/tokens.ts`                                                |
+| Domain event                                | domain         | `domain/events/{evento}.event.ts`                                       |
+| Domain exception                            | domain         | `domain/exceptions/{error}.error.ts`                                    |
+| Entity factory (UUID v7 generation)         | domain         | `domain/factories/{agregado}.factory.ts`                                |
+| Use case implementation (orchestration)     | application    | `application/services/{svc}-application.service.ts`                     |
+| HTTP input contract                         | application    | `application/dto/{op}-request.dto.ts`                                   |
+| Zod validation schema                       | application    | `application/dto/{op}-request.schema.ts`                                |
+| HTTP output contract                        | application    | `application/dto/{entidad}-response.dto.ts`                             |
+| Domain <-> DTO mapper                       | application    | `application/mappers/{entidad}.mapper.ts`                               |
+| HTTP controller                             | infrastructure | `infrastructure/controllers/{ctrl}.controller.ts`                       |
+| Prisma repository implementation            | infrastructure | `infrastructure/persistence/repositories/{repo}-postgres.repository.ts` |
+| Domain <-> Prisma mapper                    | infrastructure | `infrastructure/persistence/mappers/prisma-{entidad}.mapper.ts`         |
+| Stub/adapter for external module            | infrastructure | `infrastructure/adapters/{modulo}-stub.adapter.ts`                      |
+| Background job                              | infrastructure | `infrastructure/jobs/{modulo}-jobs.service.ts`                          |
+| NestJS module with DI                       | infrastructure | `infrastructure/{modulo}.module.ts`                                     |
+| Swagger decorators                          | docs           | `docs/decorators/api-{modulo}.decorator.ts`                             |
+| Swagger examples                            | docs           | `docs/examples/{modulo}.examples.ts`                                    |
 
 ## Naming Conventions
 
-| Concept                | Convention                           | Example                            |
-|------------------------|--------------------------------------|------------------------------------|
-| **Port (interface)**   | `{Concepto}Service` / `{Concepto}Repository` / `{Concepto}Port` | `VentaService`, `InventarioRepository`, `CatalogoPort` |
-| **Application Service**| `{Concepto}ApplicationService`       | `InventarioApplicationService`     |
-| **Adapter**            | `{Concepto}{Tecnologia}Adapter`      | `InventarioHttpAdapter`            |
-| **Repository impl**    | `{Concepto}PostgresRepository`       | `InventarioPostgresRepository`     |
-| **DI Token**           | `{CONCEPTO}_{TIPO}_TOKEN` (Symbol)   | `INVENTARIO_SERVICE_TOKEN`         |
-| **Domain Event**       | `{Agregado}{Accion}Event`            | `InventarioReservadoEvent`         |
-| **Domain Exception**   | `{Descripcion}Error`                 | `StockInsuficienteError`           |
-| **Factory**            | `{Agregado}Factory`                  | `InventarioFactory`                |
-| **Value Object**       | `{Concepto}` (file: `{vo}.ts`)       | `Cantidad`, `Version`              |
-| **Prisma Mapper**      | `Prisma{Entidad}Mapper`              | `PrismaInventarioMapper`           |
-| **DTO Mapper**         | `{Entidad}Mapper`                    | `InventarioMapper`                 |
+| Concept                 | Convention                                                      | Example                                                |
+| ----------------------- | --------------------------------------------------------------- | ------------------------------------------------------ |
+| **Port (interface)**    | `{Concepto}Service` / `{Concepto}Repository` / `{Concepto}Port` | `VentaService`, `InventarioRepository`, `CatalogoPort` |
+| **Application Service** | `{Concepto}ApplicationService`                                  | `InventarioApplicationService`                         |
+| **Adapter**             | `{Concepto}{Tecnologia}Adapter`                                 | `InventarioHttpAdapter`                                |
+| **Repository impl**     | `{Concepto}PostgresRepository`                                  | `InventarioPostgresRepository`                         |
+| **DI Token**            | `{CONCEPTO}_{TIPO}_TOKEN` (Symbol)                              | `INVENTARIO_SERVICE_TOKEN`                             |
+| **Domain Event**        | `{Agregado}{Accion}Event`                                       | `InventarioReservadoEvent`                             |
+| **Domain Exception**    | `{Descripcion}Error`                                            | `StockInsuficienteError`                               |
+| **Factory**             | `{Agregado}Factory`                                             | `InventarioFactory`                                    |
+| **Value Object**        | `{Concepto}` (file: `{vo}.ts`)                                  | `Cantidad`, `Version`                                  |
+| **Prisma Mapper**       | `Prisma{Entidad}Mapper`                                         | `PrismaInventarioMapper`                               |
+| **DTO Mapper**          | `{Entidad}Mapper`                                               | `InventarioMapper`                                     |
 
 ```typescript
 // ✅ CORRECT: No "I" prefix on interfaces
@@ -237,17 +247,96 @@ class Inventario {    model Inventario {     interface InventarioResponseDto {
 ```
 
 **Mappers connect them**:
+
 - `infrastructure/persistence/mappers/prisma-{entidad}.mapper.ts` → Domain <-> Prisma
 - `application/mappers/{entidad}.mapper.ts` → Domain <-> DTO
 
+## Outbound Ports Organization
+
+Outbound ports are organized into **three subcategories** by purpose:
+
+### 1. `outbound/repositories/` - Persistence
+
+Interfaces for persisting and retrieving aggregates from the database.
+
+```typescript
+// domain/ports/outbound/repositories/cuenta-usuario.repository.ts
+export interface CuentaUsuarioRepository {
+  guardar(cuenta: CuentaUsuario): Promise<void>;
+  buscarPorId(id: string): Promise<CuentaUsuario | null>;
+}
+
+// Implemented in: infrastructure/persistence/repositories/cuenta-usuario-postgres.repository.ts
+```
+
+**When to use**: For database operations (save, find, update aggregates).
+
+### 2. `outbound/external/` - Technical Services
+
+Interfaces for external technical infrastructure (email, JWT, password hashing, etc).
+
+```typescript
+// domain/ports/outbound/external/email-service.port.ts
+export interface EmailService {
+  enviarVerificacion(email: string, token: string): Promise<void>;
+}
+
+// domain/ports/outbound/external/password-hasher.port.ts
+export interface PasswordHasher {
+  hash(password: string): Promise<string>;
+}
+
+// Implemented in: infrastructure/adapters/bcrypt-password-hasher.adapter.ts
+```
+
+**When to use**: For technical services that are NOT part of business domain (auth, notifications, crypto).
+
+### 3. `outbound/integrations/` - Other System Modules
+
+Interfaces for interacting with other bounded contexts in the system.
+
+```typescript
+// domain/ports/outbound/integrations/cliente.port.ts
+export interface ClientePort {
+  buscarPorId(id: string): Promise<ClienteData | null>;
+}
+
+// domain/ports/outbound/integrations/configuracion.port.ts
+export interface ConfiguracionPort {
+  obtenerDuracionSesion(): Promise<number>;
+}
+
+// Implemented in: infrastructure/adapters/cliente-http.adapter.ts
+```
+
+**When to use**: For cross-module communication (other bounded contexts).
+
+### Barrel Exports (index.ts)
+
+Each subcategory has an `index.ts` for clean imports:
+
+```typescript
+// ✅ Clean imports (from subcategory)
+import { CuentaUsuarioRepository } from '../../domain/ports/outbound/repositories';
+import { EmailService } from '../../domain/ports/outbound/external';
+import { ClientePort } from '../../domain/ports/outbound/integrations';
+
+// ❌ Verbose (full file path)
+import { CuentaUsuarioRepository } from '../../domain/ports/outbound/repositories/cuenta-usuario.repository';
+```
+
 ## Types vs DTOs
 
-| Aspect         | Types (domain)                                | DTOs (application)                       |
-|----------------|-----------------------------------------------|------------------------------------------|
-| **Location**   | `domain/aggregates/{e}/{e}.types.ts`          | `application/dto/{op}-request.dto.ts`    |
-| **Types used** | Domain enums, value objects                   | Primitives (string, number, boolean)     |
-| **Purpose**    | Entity method contracts, reconstruction       | HTTP input/output                        |
-| **Validated by** | Entity invariants                           | Zod schemas                              |
+| Aspect           | Types (domain)                                                              | DTOs (application)                    |
+| ---------------- | --------------------------------------------------------------------------- | ------------------------------------- |
+| **Location**     | `domain/types/` (shared) or `domain/aggregates/{e}/{e}.types.ts` (internal) | `application/dto/{op}-request.dto.ts` |
+| **Types used**   | Domain enums, value objects                                                 | Primitives (string, number, boolean)  |
+| **Purpose**      | Port contracts, entity methods                                              | HTTP input/output                     |
+| **Validated by** | Entity invariants                                                           | Zod schemas                           |
+| **Scope**        | Internal to domain layer                                                    | Exposed to clients (API)              |
+
+**Use `domain/types/`** for data contracts shared between ports (e.g., `LoginData`, `LoginResult`).
+**Use `domain/aggregates/{e}/*.types.ts`** for aggregate-specific contracts (e.g., `ReservarInventarioProps`).
 
 ## Checklist: Creating a New Module
 
@@ -256,12 +345,17 @@ class Inventario {    model Inventario {     interface InventarioResponseDto {
 3. Run `./scripts/create-hexagonal-module.sh {modulo}` (scaffolding)
 4. **DOMAIN** first:
    - [ ] Enums in `domain/aggregates/{agregado}/types.ts` (Const Types Pattern)
-   - [ ] Types in `domain/aggregates/{agregado}/{agregado}.types.ts`
+   - [ ] Internal types in `domain/aggregates/{agregado}/{agregado}.types.ts`
+   - [ ] Shared types in `domain/types/{dominio}.types.ts`
    - [ ] Entity in `domain/aggregates/{agregado}/{agregado}.entity.ts`
    - [ ] Factory in `domain/factories/{agregado}.factory.ts`
    - [ ] Value objects in `domain/value-objects/`
-   - [ ] Inbound port in `domain/ports/inbound/`
-   - [ ] Outbound ports in `domain/ports/outbound/`
+   - [ ] Inbound ports in `domain/ports/inbound/`
+   - [ ] Outbound ports organized:
+     - [ ] `domain/ports/outbound/repositories/` (persistence)
+     - [ ] `domain/ports/outbound/external/` (technical services)
+     - [ ] `domain/ports/outbound/integrations/` (other modules)
+     - [ ] Each with `index.ts` barrel export
    - [ ] Tokens in `domain/ports/tokens.ts`
    - [ ] Events in `domain/events/`
    - [ ] Exceptions in `domain/exceptions/`

@@ -288,7 +288,6 @@ model LogAutenticacion {
   tipoEvento         TipoEventoAuth  @map("tipo_evento")
   resultado          ResultadoAuth   @map("resultado")
   motivoFallo        String?         @map("motivo_fallo") @db.VarChar(100)
-  ipOrigen           String?         @map("ip_origen") @db.VarChar(45)
   userAgent          String?         @map("user_agent") @db.VarChar(500)
   metadata           Json?           @map("metadata")
   fechaEvento        DateTime        @default(now()) @map("fecha_evento")
@@ -298,6 +297,5 @@ model LogAutenticacion {
   @@index([emailIntento, fechaEvento], name: "idx_log_auth_email_fecha")
   @@index([cuentaUsuarioId, fechaEvento], name: "idx_log_auth_cuenta_fecha")
   @@index([tipoEvento, fechaEvento], name: "idx_log_auth_tipo_fecha")
-  @@index([ipOrigen], name: "idx_log_auth_ip")
   @@map("log_autenticacion")
 }

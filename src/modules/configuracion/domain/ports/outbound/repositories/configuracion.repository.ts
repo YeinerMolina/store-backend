@@ -1,6 +1,6 @@
-import { ParametroOperativo } from '../../aggregates/parametro-operativo/parametro-operativo.entity';
-import { Politica } from '../../aggregates/politica/politica.entity';
-import { TipoPoliticaEnum } from '../../aggregates/configuracion.types';
+import { ParametroOperativo } from '../../../aggregates/parametro-operativo/parametro-operativo.entity';
+import { Politica } from '../../../aggregates/politica/politica.entity';
+import { TipoPoliticaEnum } from '../../../aggregates/configuracion.types';
 
 export interface ConfiguracionRepository {
   guardarParametro(parametro: ParametroOperativo): Promise<void>;

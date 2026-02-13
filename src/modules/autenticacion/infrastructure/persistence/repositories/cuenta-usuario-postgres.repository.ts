@@ -3,7 +3,7 @@ import type { CuentaUsuario as PrismaCuentaUsuario } from '@prisma/client';
 import { CuentaUsuario } from '../../../domain/aggregates/cuenta-usuario/cuenta-usuario.entity';
 import { SesionUsuario } from '../../../domain/aggregates/sesion-usuario/sesion-usuario.entity';
 import { TokenRecuperacion } from '../../../domain/aggregates/token-recuperacion/token-recuperacion.entity';
-import type { CuentaUsuarioRepository } from '../../../domain/ports/outbound/cuenta-usuario.repository';
+import type { CuentaUsuarioRepository } from '../../../domain/ports/outbound/repositories';
 import type { GuardarCuentaUsuarioOptions } from '../../../domain/aggregates/cuenta-usuario/cuenta-usuario.types';
 import { PrismaCuentaUsuarioMapper } from '../mappers/prisma-cuenta-usuario.mapper';
 import { PrismaSesionUsuarioMapper } from '../mappers/prisma-sesion-usuario.mapper';
@@ -26,11 +26,16 @@ export class CuentaUsuarioPostgresRepository implements CuentaUsuarioRepository 
     private readonly transactionManager: TransactionManager,
   ) {}
 
+  /**
+   * Persiste el agregado CuentaUsuario con sus entidades relacionadas.
+   * Soporta reutilizar una transacción existente para coordinación atómica
+   * con otros agregados (ej: LogAutenticacion).
+   */
   async guardar(
     cuenta: CuentaUsuario,
     opciones?: GuardarCuentaUsuarioOptions,
   ): Promise<void> {
-    await this.transactionManager.transaction(async (tx) => {
+    const ejecutarGuardado = async (tx: PrismaTransactionClient) => {
       await this.persistirCuenta(tx, cuenta);
 
       if (opciones?.sesiones?.nuevas) {
@@ -55,7 +60,13 @@ export class CuentaUsuarioPostgresRepository implements CuentaUsuarioRepository 
           opciones.tokensRecuperacion.actualizados,
         );
       }
-    });
+    };
+
+    if (opciones?.transactionContext) {
+      await ejecutarGuardado(opciones.transactionContext);
+    } else {
+      await this.transactionManager.transaction(ejecutarGuardado);
+    }
   }
 
   private async persistirCuenta(

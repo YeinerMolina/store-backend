@@ -1,4 +1,4 @@
-import type { SesionInfo } from './autenticacion.types';
+import type { SesionInfo } from '../../types';
 
 /**
  * Puerto inbound para gestión de sesiones activas.

@@ -23,11 +23,14 @@ Este proyecto implementa **Arquitectura Hexagonal (Ports & Adapters)** combinada
 - ✅ Estructura detallada de cada módulo (domain, application, infrastructure)
 - ✅ Flujo de dependencias (siempre hacia adentro)
 - ✅ Puertos inbound vs outbound con ejemplos
+- ✅ **Organización de puertos outbound** (repositories, external, integrations)
+- ✅ **Tabla de decisión: ¿Dónde va cada archivo?**
 - ✅ Agregados DDD y repositorios (un agregado = un repository)
 - ✅ Convenciones de nombres (sin prefijo "I" en interfaces)
 - ✅ API declarativa para entidades internas
 - ✅ Inversión de dependencias con NestJS
 - ✅ Types del dominio vs DTOs de aplicación
+- ✅ **Separación de types**: `domain/types/` (compartidos) vs `domain/aggregates/*/types.ts` (internos)
 - ✅ Mappers entre capas (Domain ↔ Prisma, Domain ↔ DTO)
 - ✅ Testing en hexagonal (unit, integration, e2e)
 - ✅ Patrones completos de código
@@ -152,17 +155,19 @@ async crear(@Body() dto: CrearInventarioDto) { }
 
 ## 🎯 Guía Rápida: ¿Qué Documento Leo?
 
-| Necesito...                                  | Lee este documento            |
-| -------------------------------------------- | ----------------------------- |
-| Entender estructura de módulos               | ARQUITECTURA_HEXAGONAL.md     |
-| Saber dónde va un archivo (domain/app/infra) | ARQUITECTURA_HEXAGONAL.md     |
-| Crear un puerto o adaptador                  | ARQUITECTURA_HEXAGONAL.md     |
-| Entender agregados DDD                       | ARQUITECTURA_HEXAGONAL.md     |
-| Ver flujo de datos visualmente               | ARQUITECTURA_DIAGRAMA.md      |
-| Entender dependencias entre módulos          | ARQUITECTURA_DIAGRAMA.md      |
-| Validar entrada en controller                | DECORADORES_PERSONALIZADOS.md |
-| Crear decorador personalizado                | DECORADORES_PERSONALIZADOS.md |
-| Implementar autorización con decoradores     | DECORADORES_PERSONALIZADOS.md |
+| Necesito...                                                | Lee este documento            |
+| ---------------------------------------------------------- | ----------------------------- |
+| Entender estructura de módulos                             | ARQUITECTURA_HEXAGONAL.md     |
+| **Saber dónde va un archivo (tabla decisión)**             | **ARQUITECTURA_HEXAGONAL.md** |
+| Crear un puerto o adaptador                                | ARQUITECTURA_HEXAGONAL.md     |
+| **Organizar ports outbound (repos/external/integrations)** | **ARQUITECTURA_HEXAGONAL.md** |
+| Entender agregados DDD                                     | ARQUITECTURA_HEXAGONAL.md     |
+| **Separar types compartidos vs internos**                  | **ARQUITECTURA_HEXAGONAL.md** |
+| Ver flujo de datos visualmente                             | ARQUITECTURA_DIAGRAMA.md      |
+| Entender dependencias entre módulos                        | ARQUITECTURA_DIAGRAMA.md      |
+| Validar entrada en controller                              | DECORADORES_PERSONALIZADOS.md |
+| Crear decorador personalizado                              | DECORADORES_PERSONALIZADOS.md |
+| Implementar autorización con decoradores                   | DECORADORES_PERSONALIZADOS.md |
 
 ---
 
@@ -199,7 +204,11 @@ ls -la src/modules/inventario/
 1. **DOMAIN** (núcleo puro, sin dependencias)
    - `domain/aggregates/` - Entidades y agregados
    - `domain/value-objects/` - Value Objects inmutables
-   - `domain/ports/` - Interfaces (contratos)
+   - `domain/ports/inbound/` - Casos de uso (qué expone)
+   - `domain/ports/outbound/repositories/` - Persistencia
+   - `domain/ports/outbound/external/` - Servicios técnicos (email, JWT)
+   - `domain/ports/outbound/integrations/` - Otros módulos
+   - `domain/types/` - Contratos de datos compartidos
    - `domain/events/` - Eventos de dominio
    - `domain/factories/` - Creación de agregados con UUID v7
    - `domain/exceptions/` - Errores de dominio
@@ -210,7 +219,8 @@ ls -la src/modules/inventario/
    - `application/services/` - Implementación de casos de uso
 
 3. **INFRASTRUCTURE** (adaptadores)
-   - `infrastructure/persistence/` - Repositorios Prisma + mappers
+   - `infrastructure/persistence/repositories/` - Repositorios Prisma
+   - `infrastructure/persistence/mappers/` - Domain ↔ Prisma
    - `infrastructure/adapters/` - Adaptadores a otros módulos
    - `infrastructure/controllers/` - Controllers HTTP con decoradores
    - `infrastructure/{modulo}.module.ts` - Módulo NestJS con DI
@@ -228,6 +238,14 @@ Al implementar o revisar un módulo, verificar:
 - [ ] Factories para creación (con UUID v7 desde `IdGenerator.generate()`)
 - [ ] Value Objects inmutables
 - [ ] Puertos inbound/outbound sin implementación
+- [ ] **Puertos outbound organizados**:
+  - [ ] `repositories/` para persistencia
+  - [ ] `external/` para servicios técnicos
+  - [ ] `integrations/` para otros módulos
+  - [ ] Cada subcarpeta con `index.ts` (barrel export)
+- [ ] **Types organizados**:
+  - [ ] `domain/types/` para contratos compartidos entre puertos
+  - [ ] `domain/aggregates/{agregado}/*.types.ts` para contratos internos
 - [ ] Tokens DI en `domain/ports/tokens.ts` (NO en infrastructure)
 - [ ] Eventos de dominio emitidos en cambios de estado
 - [ ] Excepciones de dominio para reglas de negocio

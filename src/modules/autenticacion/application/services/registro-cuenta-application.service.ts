@@ -3,29 +3,43 @@ import type { RegistroCuentaService } from '../../domain/ports/inbound/registro-
 import type {
   RegistrarClienteData,
   CrearCuentaEmpleadoData,
-} from '../../domain/ports/inbound/autenticacion.types';
-import type { PasswordHasher } from '../../domain/ports/outbound/password-hasher.port';
-import type { EmailService } from '../../domain/ports/outbound/email-service.port';
-import type { ClientePort } from '../../domain/ports/outbound/cliente.port';
-import type { EmpleadoPort } from '../../domain/ports/outbound/empleado.port';
-import type { CuentaUsuarioRepository } from '../../domain/ports/outbound/cuenta-usuario.repository';
+  CrearCuentaResult,
+} from '../../domain/types';
+import type { PasswordHasher } from '../../domain/ports/outbound/external';
+import type { EmailService } from '../../domain/ports/outbound/external';
+import type { ClientePort } from '../../domain/ports/outbound/integrations';
+import type { EmpleadoPort } from '../../domain/ports/outbound/integrations';
+import type { CuentaUsuarioRepository } from '../../domain/ports/outbound/repositories';
+import type { LogAutenticacionRepository } from '../../domain/ports/outbound/repositories';
+import type { TransactionManager } from '@shared/database/ports/transaction-manager.port';
 import {
   CUENTA_USUARIO_REPOSITORY_TOKEN,
+  LOG_AUTENTICACION_REPOSITORY_TOKEN,
   PASSWORD_HASHER_TOKEN,
   EMAIL_SERVICE_TOKEN,
   CLIENTE_PORT_TOKEN,
   EMPLEADO_PORT_TOKEN,
+  TRANSACTION_MANAGER_TOKEN,
 } from '../../domain/ports/tokens';
 import { CuentaUsuarioFactory } from '../../domain/factories/cuenta-usuario.factory';
-import { TipoTokenRecuperacion } from '../../domain/aggregates/types';
+import {
+  TipoTokenRecuperacion,
+  TipoEventoAuth,
+  ResultadoAuth,
+} from '../../domain/aggregates/types';
 import { CuentaValidationService } from './internal/cuenta-validation.service';
 import { TokenRecoveryService } from './internal/token-recovery.service';
+import { LogAutenticacionFactory } from '../../domain/factories';
 
 @Injectable()
 export class RegistroCuentaApplicationService implements RegistroCuentaService {
   constructor(
     @Inject(CUENTA_USUARIO_REPOSITORY_TOKEN)
     private readonly cuentaRepository: CuentaUsuarioRepository,
+    @Inject(LOG_AUTENTICACION_REPOSITORY_TOKEN)
+    private readonly logRepository: LogAutenticacionRepository,
+    @Inject(TRANSACTION_MANAGER_TOKEN)
+    private readonly transactionManager: TransactionManager,
     @Inject(PASSWORD_HASHER_TOKEN)
     private readonly passwordHasher: PasswordHasher,
     @Inject(EMAIL_SERVICE_TOKEN)
@@ -40,7 +54,7 @@ export class RegistroCuentaApplicationService implements RegistroCuentaService {
 
   async registrarCliente(
     data: RegistrarClienteData,
-  ): Promise<{ accountId: string }> {
+  ): Promise<CrearCuentaResult> {
     await this.cuentaValidation.validarEmailNoExiste(data.email);
 
     const { clienteId } = await this.clientePort.crearClienteConCuenta({
@@ -71,7 +85,8 @@ export class RegistroCuentaApplicationService implements RegistroCuentaService {
 
   async crearCuentaEmpleado(
     data: CrearCuentaEmpleadoData,
-  ): Promise<{ accountId: string }> {
+    empleadoId: string,
+  ): Promise<CrearCuentaResult> {
     await this.cuentaValidation.validarEmailNoExiste(data.email);
     await this.cuentaValidation.validarEmpleadoExiste(data.empleadoId);
 
@@ -83,7 +98,21 @@ export class RegistroCuentaApplicationService implements RegistroCuentaService {
       empleadoId: data.empleadoId,
     });
 
-    await this.cuentaRepository.guardar(cuenta);
+    const log = LogAutenticacionFactory.crear({
+      emailIntento: data.email,
+      cuentaUsuarioId: cuenta.id,
+      tipoEvento: TipoEventoAuth.CREACION_CUENTA_EMPLEADO,
+      resultado: ResultadoAuth.EXITOSO,
+      metadata: {
+        admin_id: empleadoId,
+        empleado_id: data.empleadoId,
+      },
+    });
+
+    await this.transactionManager.transaction(async (tx) => {
+      await this.cuentaRepository.guardar(cuenta, { transactionContext: tx });
+      await this.logRepository.guardar(log, tx);
+    });
 
     const empleado = await this.empleadoPort.buscarPorId(data.empleadoId);
 

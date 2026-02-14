@@ -22,6 +22,7 @@ import {
   TRANSACTION_MANAGER_TOKEN,
 } from '../../domain/ports/tokens';
 import type { CuentaUsuario } from '../../domain/aggregates/cuenta-usuario/cuenta-usuario.entity';
+import type { LogAutenticacion } from '../../domain/aggregates/log-autenticacion/log-autenticacion.entity';
 import {
   EstadoCuenta,
   TipoEventoAuth,
@@ -57,52 +58,25 @@ export class AutenticacionApplicationService implements AutenticacionService {
   ) {}
 
   async login(data: LoginData): Promise<LoginResult> {
-    const cuenta = await this.cuentaRepository.buscarPorEmail(data.email);
-    if (!cuenta) {
-      await this.registrarLoginFallido(data.email, null, data.userAgent);
-      throw new CredencialesInvalidasError();
-    }
-
-    this.cuentaValidation.validarCuentaPuedeAutenticarse(cuenta);
-    await this.validarPasswordYManejarFallo(
-      data.password,
-      cuenta,
-      data.userAgent,
-    );
+    const cuenta = await this.buscarYValidarCuenta(data.email, data.userAgent);
+    await this.validarPassword(data.password, cuenta, data.userAgent);
 
     cuenta.registrarLoginExitoso();
 
-    const { accessToken, refreshToken, expiresIn } =
-      await this.sesionManagement.crearNuevaSesion(cuenta, data.userAgent);
+    const { accessToken, refreshToken, sesion, expiresIn } =
+      await this.sesionManagement.generarNuevaSesion(cuenta, data.userAgent);
 
-    const sesionesActualizadas = Array.from(cuenta.sesiones);
-    const ultimaSesion = sesionesActualizadas[sesionesActualizadas.length - 1];
+    cuenta.agregarSesion(sesion);
 
-    const log = LogAutenticacionFactory.crear({
-      emailIntento: cuenta.email,
-      cuentaUsuarioId: cuenta.id,
-      tipoEvento: TipoEventoAuth.LOGIN,
-      resultado: ResultadoAuth.EXITOSO,
-      userAgent: data.userAgent,
-      metadata: {
-        sesion_id: ultimaSesion.id,
-        dispositivo: data.userAgent,
-      },
-    });
+    const log = this.crearLogLoginExitoso(cuenta, sesion.id, data.userAgent);
 
-    await this.transactionManager.transaction(async (tx) => {
-      await this.cuentaRepository.guardar(cuenta, { transactionContext: tx });
-      await this.logRepository.guardar(log, tx);
-    });
+    await this.persistirLoginExitoso(cuenta, log);
 
-    return {
+    return this.construirLoginResult(cuenta, {
       accessToken,
       refreshToken,
       expiresIn,
-      userType: cuenta.tipoUsuario,
-      userId: cuenta.propietario.getId(),
-      requiereCambioPassword: cuenta.requiereCambioPassword(),
-    };
+    });
   }
 
   async refreshToken(data: RefreshTokenData): Promise<LoginResult> {
@@ -154,8 +128,8 @@ export class AutenticacionApplicationService implements AutenticacionService {
 
     return {
       accessToken,
-      refreshToken: nuevoRefreshToken,
       expiresIn,
+      refreshToken: nuevoRefreshToken,
       userType: cuenta.tipoUsuario,
       userId: cuenta.propietario.getId(),
     };
@@ -166,16 +140,12 @@ export class AutenticacionApplicationService implements AutenticacionService {
 
     const cuenta =
       await this.cuentaRepository.buscarPorRefreshToken(refreshTokenHash);
-    if (!cuenta) {
-      return;
-    }
+    if (!cuenta) return;
 
     const sesion = cuenta.sesiones.find(
       (s) => s.refreshTokenHash === refreshTokenHash,
     );
-    if (!sesion) {
-      return;
-    }
+    if (!sesion) return;
 
     sesion.revocar({ motivo: 'Logout manual' });
 
@@ -198,7 +168,63 @@ export class AutenticacionApplicationService implements AutenticacionService {
     });
   }
 
-  private async validarPasswordYManejarFallo(
+  private async buscarYValidarCuenta(
+    email: string,
+    userAgent: string,
+  ): Promise<CuentaUsuario> {
+    const cuenta = await this.cuentaRepository.buscarPorEmail(email);
+    if (!cuenta) {
+      await this.registrarLoginFallido(email, null, userAgent);
+      throw new CredencialesInvalidasError();
+    }
+
+    this.cuentaValidation.validarCuentaPuedeAutenticarse(cuenta);
+    return cuenta;
+  }
+
+  private crearLogLoginExitoso(
+    cuenta: CuentaUsuario,
+    sesionId: string,
+    userAgent: string,
+  ) {
+    return LogAutenticacionFactory.crear({
+      emailIntento: cuenta.email,
+      cuentaUsuarioId: cuenta.id,
+      tipoEvento: TipoEventoAuth.LOGIN,
+      resultado: ResultadoAuth.EXITOSO,
+      userAgent,
+      metadata: {
+        sesion_id: sesionId,
+        dispositivo: userAgent,
+      },
+    });
+  }
+
+  private async persistirLoginExitoso(
+    cuenta: CuentaUsuario,
+    log: LogAutenticacion,
+  ) {
+    await this.transactionManager.transaction(async (tx) => {
+      await this.cuentaRepository.guardar(cuenta, { transactionContext: tx });
+      await this.logRepository.guardar(log, tx);
+    });
+  }
+
+  private construirLoginResult(
+    cuenta: CuentaUsuario,
+    tokens: { accessToken: string; refreshToken: string; expiresIn: number },
+  ): LoginResult {
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresIn: tokens.expiresIn,
+      userType: cuenta.tipoUsuario,
+      userId: cuenta.propietario.getId(),
+      requiereCambioPassword: cuenta.requiereCambioPassword(),
+    };
+  }
+
+  private async validarPassword(
     password: string,
     cuenta: CuentaUsuario,
     userAgent: string,

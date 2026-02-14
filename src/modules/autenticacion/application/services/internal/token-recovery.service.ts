@@ -76,10 +76,14 @@ export class TokenRecoveryService {
     const token = this.tokenGenerator.generate();
     const tokenHash = this.tokenGenerator.hash(token);
 
-    const fechaExpiracion =
-      tipoToken === TipoTokenRecuperacion.VERIFICACION_EMAIL
-        ? await this.calcularFechaExpiracionTokenVerificacion()
-        : await this.calcularFechaExpiracionTokenRecuperacion();
+    const promises = {
+      [TipoTokenRecuperacion.VERIFICACION_EMAIL]:
+        this.calcularFechaExpiracionTokenVerificacion(),
+      [TipoTokenRecuperacion.RECUPERACION_PASSWORD]:
+        this.calcularFechaExpiracionTokenRecuperacion(),
+    };
+
+    const fechaExpiracion = await promises[tipoToken];
 
     const tokenRecuperacion = TokenRecuperacionFactory.crear({
       cuentaUsuarioId,

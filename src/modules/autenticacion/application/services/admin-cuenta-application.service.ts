@@ -61,10 +61,10 @@ export class AdminCuentaApplicationService implements AdminCuentaService {
     const userId = cuenta.propietario.getId();
 
     return {
+      userId,
       accountId: cuenta.id,
       email: cuenta.email,
       tipoUsuario: cuenta.tipoUsuario,
-      userId,
       emailVerificado: cuenta.emailVerificado,
       ultimoLogin: cuenta.ultimoLogin,
     };

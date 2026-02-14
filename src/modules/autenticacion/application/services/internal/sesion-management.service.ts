@@ -51,12 +51,6 @@ export class SesionManagementService {
     return { accessToken, refreshToken, expiresIn };
   }
 
-  /**
-   * Lógica compartida entre login y refreshToken para evitar duplicación.
-   * No persiste porque ambos flujos necesitan manejar persistencia diferente:
-   * - login: persiste solo sesión nueva
-   * - refreshToken: persiste sesión nueva + revoca sesión anterior (transacción atómica)
-   */
   async generarNuevaSesion(
     cuenta: CuentaUsuario,
     dispositivo?: string,
@@ -141,12 +135,14 @@ export class SesionManagementService {
   private async calcularFechaExpiracionRefreshToken(
     tipoUsuario: TipoUsuario,
   ): Promise<Date> {
-    const ttlHoras =
-      tipoUsuario === TipoUsuario.CLIENTE
-        ? (await this.configuracionPort.obtenerTTLRefreshTokenClienteDias()) *
-          24
-        : await this.configuracionPort.obtenerTTLRefreshTokenEmpleadoHoras();
-
+    const promise = {
+      [TipoUsuario.CLIENTE]: this.configuracionPort
+        .obtenerTTLRefreshTokenClienteDias()
+        .then((dias) => dias * 24),
+      [TipoUsuario.EMPLEADO]:
+        this.configuracionPort.obtenerTTLRefreshTokenEmpleadoHoras(),
+    };
+    const ttlHoras = await promise[tipoUsuario];
     return new Date(Date.now() + ttlHoras * 60 * 60 * 1000);
   }
 }
